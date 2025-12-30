@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Music - Generate audio.js</title>
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: Arial;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 50px;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        #audioFile {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #333;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid #555;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .upload-btn:hover {
+            background: #444;
+        }
+
+        .file-list {
+            width: 300px;
+            margin-top: 20px;
+        }
+
+        .file-item {
+            background: #222;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 3px solid #666;
+        }
+    </style>
+</head>
+<body>
+<label for="audioFile" class="upload-btn">📁 Загрузить аудио (файл ждать от 0 до 10 минут)</label>
+<input type="file" id="audioFile" accept="audio/*" multiple />
+<label id="audioText">.</label>
+
+<script src="./js/jsmediatags.min.js"></script>
+<script>
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+function getAudioFeatures(audioData) {
+    const buffer = audioData;
+    const duration = audioData.duration;
+    const maxSamples = Math.min(45 * audioData.sampleRate, buffer.length);
+    const channelData = buffer.getChannelData(0).slice(0, maxSamples);
+    let zcr = 0;
+    let spectralSum = 0;
+    let mfccSum = 0;
+    let mfccSquaredSum = 0;
+    let energySum = 0;
+    for (let i = 1; i < channelData.length; i++) {
+        if ((channelData[i-1] * channelData[i]) < 0) {
+            zcr++;
+        }
+    }
+    const zcr_mean = zcr / channelData.length;
+    for (let i = 0; i < channelData.length; i += 1024) {
+        const frame = channelData.slice(i, i + 1024);
+        if (frame.length === 1024) {
+            const energy = frame.reduce((sum, val) => sum + val * val, 0);
+            energySum += energy;
+            mfccSum += Math.log(energy + 1e-10);
+            mfccSquaredSum += Math.log(energy + 1e-10) ** 2;
+            let centroid = 0;
+            let power = 0;
+            for (let j = 0; j < frame.length; j++) {
+                const freq = j * audioData.sampleRate / 2048;
+                centroid += freq * Math.abs(frame[j]);
+                power += Math.abs(frame[j]);
+            }
+            spectralSum += centroid / (power + 1e-10);
+        }
+    }
+    const frameSize = 1024;
+    const frames = Math.floor(channelData.length / frameSize);
+    const validFrames = Math.max(frames, 1);
+    const mfcc_mean = mfccSum / frames;
+    const mfcc_std = Math.sqrt(mfccSquaredSum / frames - mfcc_mean ** 2);
+    const spectral_centroid_mean = spectralSum / frames;
+    const avgEnergy = energySum / (validFrames * frameSize);
+    let tempo = 120;
+    if (duration > 1) {
+        const baseTempo = 120;
+        const zcrFactor = 0.8 + (Math.min(zcr_mean, 0.3) * 2);
+        const energyLog = Math.log10(avgEnergy * 1000 + 1);
+        const energyFactor = 0.7 + Math.min(energyLog, 1.5) * 0.2;
+        const centroidFactor = 0.9 + (Math.min(spectral_centroid_mean / 5000, 0.3));
+        tempo = baseTempo * zcrFactor * energyFactor * centroidFactor;
+        tempo = Math.min(Math.max(tempo, 40), 200);
+        tempo = Math.round(tempo / 5) * 5;
+    }
+    return { duration: duration, tempo: tempo, zcr_mean: zcr_mean, spectral_centroid_mean: spectral_centroid_mean * 100, mfcc_std: mfcc_std * 10, mfcc_mean: mfcc_mean };
+}
+
+async function getAudioMetadata(file) {
+    const metadata = { title: '', artist: '', genre: '', album: '', year: '', track: '', picture: null };
+    try {
+        metadata.title = file.name.replace(/\.[^/.]+$/, "");
+        const tags = await new Promise((resolve, reject) => { jsmediatags.read(file, { onSuccess: resolve, onError: reject }); }); // error
+        const tag = tags.tags || {};
+        metadata.title = tag.title || tag.TIT2 || '';
+        metadata.artist = tag.artist || tag.TPE1 || '';
+        metadata.album = tag.album || tag.TALB || '';
+        metadata.genre = tag.genre || tag.GENRE || ''; // tag.TCON || 
+        metadata.year = tag.year || tag.TYER || tag.TDRC || '';
+        metadata.track = tag.track || tag.TRCK || '';
+        let picture = null;
+        let format = "image/jpeg";
+        if (tag.picture) { picture = tag.picture.data; format = tag.picture.format }
+        else if (tag['covr']) { picture = (tag['covr'][0]).data; }
+        if (picture != null) {
+            let binary = '';
+            const bytes = new Uint8Array(picture);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            metadata.picture = `data:${format};base64,${btoa(binary)}`;
+        }
+    } catch (error) {
+       //console.warn('Error read metadata:', error);
+    }
+    return metadata;
+}
+
+async function getByAudioData(file) {
+    let genre = '';
+    let title = '';
+    let artist = '';
+    let duration = 0.0;
+    let local = 'eng';
+    const arrayBuffer = await file.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    const features = getAudioFeatures(audioBuffer);
+    const metadata = await getAudioMetadata(file);
+    genre = (((metadata.genre.replace("(", "").replace(")", "").split(",")[0]).split(";")[0]).split("/")[0].trim()).replace("-", "").toLowerCase().replace("[", "").replace("]", "");
+    title = metadata.title;
+    artist = metadata.artist;
+    duration = features.duration;
+    if (genre.includes("www"))  { genre = ""; }
+    if (genre.includes("http")) { genre = ""; }
+    if (genre.includes("?"))    { genre = genre.replace(/\?/g, ''); }
+    if (artist.includes("?")) { artist = artist.replace(/\?/g, ''); }
+    if (genre == "") {
+        tempo = features.tempo;
+        zcr = features.zcr_mean;
+        spectral = features.spectral_centroid_mean;
+        mfcc_std = features.mfcc_std;
+        if (duration < 29 || duration > 510) {
+            genre = "sound";
+        } else if (tempo < 90 && zcr < 0.05) {
+            genre = "classical";
+        } else if (tempo > 135 && spectral > 3500) {
+            genre = "rock";
+        } else if (tempo >= 100 && tempo <= 130 && zcr >= 0.05 && zcr <= 0.15) {
+            genre = "pop";
+        } else if (tempo > 120 && spectral > 3000 && mfcc_std < 150) {
+            genre = "electronic";
+        } else if (tempo >= 70 && tempo <= 110 && zcr >= 0.08 && zcr <= 0.2) {
+            genre = "hiphop";
+        } else if (tempo >= 60 && tempo <= 200 && zcr >= 0.1 && zcr <= 0.25) {
+            genre = "dance";
+        } else if (tempo >= 60 && zcr <= 0.05 && mfcc_std < 90 && spectral < 2000) {
+            genre = "lofi";
+        } else {
+            genre = "other";
+        }
+    }
+    title = title.trim();
+    artist = artist.trim();
+    if (title == "" || artist == "" || title.includes("http")) {
+        let newtitle = file.name.substring(0, file.name.lastIndexOf('.'));
+        const artistTitle = newtitle.split("-");
+        if (artistTitle.length > 1) {
+            artist = (artistTitle[0].toLowerCase()).replace("(", "").replace(")", "").trim();
+            newtitle = artistTitle.slice(1).join(" ").trim();
+        } else if (artist == "") {
+            artist = genre.replace("other", "best").trim();
+        }
+        artist = artist.charAt(0).toUpperCase() + artist.slice(1);
+        if (title == "" || title.includes("http")) { 
+            title = newtitle.charAt(0).toUpperCase() + newtitle.slice(1);
+        }
+    }
+    if (/[а-яё]/i.test(title) || /[а-яё]/i.test(artist) || /[а-яё]/i.test(file.name)) {
+        local = "ru";
+    }
+    let result = { genre: genre, title: title, artist: artist, filename: file.name, duration: duration, local: local };
+    return result;
+}
+
+const audioFile = document.getElementById('audioFile');
+audioFile.addEventListener('change', async (event) => {
+    const files = event.target.files; // [0]
+    let arr = [];
+    const audioText = document.getElementById("audioText");
+    for (let i = 0; i < files.length; i++) {
+        const result = await getByAudioData(files[i]);
+        arr.push(result);
+        console.log(result);
+        audioText.innerHTML = result.filename + " (" + i + "/" + files.length + ")";
+    }
+    audioText.innerHTML = "audio.js download";
+    const jsonString = "let audiojson = " + JSON.stringify(arr, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = "audio.js";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+});
+</script>
+</body>
