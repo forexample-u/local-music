@@ -208,6 +208,8 @@
             opacity: 0;
             transition: opacity 0.2s;
             z-index: 1;
+            width: 50px;
+            height: 20px;
         }
 
         .track-row:hover .track-play-icon {
@@ -462,37 +464,36 @@
         <a class="logo" href="">
             <i class="fas fa-music"></i>
         </a>
-        <div class="nav-item active">
+        <div class="nav-item active" id="menuHome">
             <div class="nav-icon">
                 <i class="fas fa-home"></i>
             </div>
         </div>
-        <div class="nav-item">
+        <div class="nav-item" id="menuSearch">
             <div class="nav-icon">
                 <i class="fas fa-search"></i>
             </div>
         </div>
-        <div class="nav-item">
+        <div class="nav-item" id="menuPlus">
             <div class="nav-icon">
                 <i class="fas fa-plus"></i>
             </div>
         </div>
-        <div class="nav-item">
+        <div class="nav-item" id="menuFavorite">
             <div class="nav-icon">
                 <i class="fas fa-heart"></i>
             </div>
         </div>
     </div>
-    
     <div class="main-content">
         <div class="playlist-container">
-            <div class="playlist-header">
-                <div class="playlist-cover">
+            <div class="playlist-header" id="playlistHeader">
+                <div class="playlist-cover" id="playlistCover">
                     <i class="fas fa-headphones"></i>
                 </div>
                 <div class="playlist-info">
-                    <div class="playlist-title">Playlist Every Day</div>
-                    <div class="playlist-description" style="color: #fff">Every day belongs to you!</div>
+                    <div class="playlist-title" id="playlistTitle">Playlist Every Day</div>
+                    <div class="playlist-description" id="playlistDescription" style="color: #fff">Every day belongs to you!</div>
                     <div class="playlist-stats">
                         <span>Service music</span>
                         <span>•</span>
@@ -510,12 +511,10 @@
                     </div>
                 </div>
             </div>
-            
             <div class="tracks-container">
                 <div class="track-list" id="trackList"></div>
             </div>
         </div>
-        
         <div class="player">
             <audio id="audioPlayer" preload="metadata">
                 <source src="audio/test.mp3" type="audio/mpeg">
@@ -550,10 +549,9 @@
                     <div class="progress-bar" id="progressBar">
                         <div class="progress" id="progress"></div>
                     </div>
-                    <span id="endTimeEl">3:17</span>
+                    <span id="endTimeEl">0:00</span>
                 </div>
             </div>
-            
             <div class="player-extra">
                 <div class="control-btn">
                     <i class="fas fa-list"></i>
@@ -584,6 +582,28 @@
         const playerCover = document.getElementById('playerCover');
         const progressBar = document.getElementById('progressBar');
         const trackList = document.getElementById('trackList');
+        const menuFavorite = document.getElementById('menuFavorite');
+        const menuHome = document.getElementById('menuHome');
+        const menuPlus = document.getElementById('menuPlus');
+        const menuSearch = document.getElementById('menuSearch');
+        const playlistHeader = document.getElementById('playlistHeader');
+        const playlistTitle = document.getElementById('playlistTitle');
+        const playlistDescription = document.getElementById('playlistDescription');
+        const playlistCover = document.getElementById('playlistCover');
+
+        function formatTime(seconds){
+            const secs = Math.floor(seconds % 60);
+            return `${Math.floor(seconds / 60)}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        function stringToColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+            return "#" + "00000".substring(0, 6 - c.length) + c;
+        }
 
         progressBar.addEventListener('click', function(e) {
             const clickPosition = e.offsetX;
@@ -593,6 +613,46 @@
                 audioPlayer.currentTime = (clickPosition / progressBarWidth) * duration;
                 progress.style.width = `${(clickPosition / progressBarWidth) * 100}%`;
             }
+        });
+
+        menuFavorite.addEventListener('click', function() {
+            menuFavorite.classList.add('active');
+            menuHome.classList.remove('active');
+            menuPlus.classList.remove('active');
+            menuSearch.classList.remove('active');
+            playlistHeader.style.background = "linear-gradient(180deg, #4c192c 0%, #121212 100%)";
+            playlistTitle.innerHTML = "Favorite";
+            playlistDescription.innerHTML = "Your favorite track";
+            playlistCover.style.background = "linear-gradient(135deg, #e94057, #8a2387, #f27121)";
+            playlistCover.innerHTML = '<i class="fas fa-heart"></i>';
+            generateByPlaylist(playlistFavorite);
+        });
+
+        menuHome.addEventListener('click', function() {
+            menuHome.classList.add('active');
+            menuFavorite.classList.remove('active');
+            menuPlus.classList.remove('active');
+            menuSearch.classList.remove('active');
+            playlistHeader.style.background = "linear-gradient(180deg, #2a5d3d 0%, #121212 100%)";
+            playlistTitle.innerHTML = "Playlist Every Day";
+            playlistDescription.innerHTML = "Every day belongs to you!";
+            playlistCover.style.background = "";
+            playlistCover.innerHTML = '<i class="fas fa-headphones"></i>';
+            generateByPlaylist(playlistTodayDay);
+        });
+
+        menuSearch.addEventListener('click', function() {
+            menuSearch.classList.add('active');
+            menuHome.classList.remove('active');
+            menuFavorite.classList.remove('active');
+            menuPlus.classList.remove('active');
+        });
+
+        menuPlus.addEventListener('click', function() {
+            menuPlus.classList.add('active');
+            menuHome.classList.remove('active');
+            menuFavorite.classList.remove('active');
+            menuSearch.classList.remove('active');
         });
 
         volumeBar.addEventListener('click', function(e) {
@@ -617,17 +677,13 @@
         });
 
         nextTrackBtn.addEventListener('click', function() {
-            if (playlistId < playlistTodayDay.length){
-                playlistId++;
-            }
+            if (playlistId + 1 < playlistTodayDay.length) { playlistId++; }
             updatePlayer(playlistTodayDay[playlistId]);
             audioPlayer.play();
         });
 
         prevTrackBtn.addEventListener('click', function() {
-            if (playlistId > 0) {
-                playlistId--;
-            }
+            if (playlistId > 0) { playlistId--; }
             updatePlayer(playlistTodayDay[playlistId]);
             audioPlayer.play();
         });
@@ -644,38 +700,21 @@
             document.getElementById('currentTrack')?.classList.remove('playing');
         });
 
-        function formatTime(seconds){
-            const secs = Math.floor(seconds % 60);
-            return `${Math.floor(seconds / 60)}:${secs < 10 ? '0' : ''}${secs}`;
-        }
-
         audioPlayer.addEventListener('timeupdate', function() {
             const seconds = audioPlayer.currentTime;
             const duration = audioPlayer.duration || 0;
             const progressPercent = duration > 0 ? (seconds / duration) * 100 : 0;
             progress.style.width = `${progressPercent}%`;
-            const secs = Math.floor(seconds % 60);
-            currentTimeEl.textContent = `${Math.floor(seconds / 60)}:${secs < 10 ? '0' : ''}${secs}`;
+            currentTimeEl.textContent = formatTime(seconds);
         });
 
         audioPlayer.addEventListener('loadedmetadata', function() {
-            const seconds = audioPlayer.duration;
-            const secs = Math.floor(seconds % 60);
-            endTimeEl.textContent =  `${Math.floor(seconds / 60)}:${secs < 10 ? '0' : ''}${secs}`;
+            endTimeEl.textContent = formatTime(audioPlayer.duration);
         });
 
         audioPlayer.addEventListener('ended', function() {
             nextTrackBtn.click();
         });
-
-        function stringToColor(str) {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                hash = str.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
-            return "#" + "00000".substring(0, 6 - c.length) + c;
-        }
 
         function stringToId(str, max = 4294967295) {
             let hash = 5381;
@@ -698,7 +737,7 @@
         function updatePlayer(track) {
             audioPlayer.src = `audio/${track.filename}`;
             playerTitle.textContent = track.title;
-            playerArtist.textContent = track.artist; // #fad0c4
+            playerArtist.textContent = track.artist;
             playerCover.style = 'background: linear-gradient(135deg,' + stringToColor(track.filename) + ',' + stringToColor(track.filename + "1") + ')';
         }
 
@@ -712,10 +751,11 @@
         }
 
         function generateByPlaylist(playlist) {
+            trackList.innerHTML = "";
             for (let i = 0; i < playlist.length; i++) {
                 const track = playlist[i];
                 const isLiked = false;
-                const trackHTML = `<div class="track-row" data-filename="${track.filename}">
+                const trackHTML = `<div class="track-row" data-playlistid="${i}" data-filename="${track.filename}">
                     <div class="track-info">
                         <div class="track-play-icon">
                             <i class="fas fa-play"></i>
@@ -735,12 +775,25 @@
                 </div>`;
                 trackList.innerHTML += trackHTML;
             }
+            const allTrackRows = trackList.querySelectorAll('.track-row');
+            allTrackRows.forEach(row => { row.addEventListener('click', handleTrackClick); });
+        }
+
+        function handleTrackClick(event) {
+            if (event.target.closest('.track-play-icon') || event.target.classList.contains('track-play-icon')) {
+                const oldPlaylistId = playlistId;
+                playlistId = parseInt(event.currentTarget.dataset.playlistid);
+                updatePlayer(playlistTodayDay[playlistId]);
+                audioPlayer.play();
+            }
         }
 
         let playlistId = 0;
         let playlistTodayDay = [];
+        let playlistFavorite = [];
         document.addEventListener('DOMContentLoaded', function() {
             playlistTodayDay = getTodayPlaylist();
+            playlistFavorite = getTodayPlaylist();
             generateByPlaylist(playlistTodayDay);
             updatePlayer(playlistTodayDay[playlistId]);
         });
