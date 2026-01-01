@@ -235,13 +235,22 @@ async function getZip(metadatas, audiojsblob) {
                 await new Promise((resolve, reject) => {
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
+                        const imgWidth = img.width;
+                        const imgHeight = img.height;
+                        canvas.width = 500;
+                        canvas.height = 500;
                         const ctx = canvas.getContext('2d');
                         ctx.fillStyle = '#FFFFFF';
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0);
-                        const jpgDataUrl = canvas.toDataURL('image/jpeg', 0.65);
+                        const scale = Math.min(500 / imgWidth, 500 / imgHeight);
+                        const newWidth = imgWidth * scale;
+                        const newHeight = imgHeight * scale;
+                        const offsetX = (500 - newWidth) / 2;
+                        const offsetY = (500 - newHeight) / 2;
+                        ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
+                        let jpgDataUrl = null;
+                        if (imgWidth >= 500 || imgHeight >= 500) { jpgDataUrl = canvas.toDataURL('image/jpeg', 0.8); }
+                        else { jpgDataUrl = canvas.toDataURL('image/jpeg', 1.0); }
                         const base64Data = jpgDataUrl.split(',')[1];
                         zipFolder.file(`${nameWithoutExt}.jpg`, base64Data, { base64: true });
                         addedCount++;
