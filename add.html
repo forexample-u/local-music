@@ -56,6 +56,7 @@
 <label id="audioText">.</label>
 
 <script src="./js/jsmediatags.min.js"></script>
+<script src="./js/jszip.min.js"></script>
 <script>
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 function getAudioFeatures(audioData) {
@@ -113,7 +114,7 @@ function getAudioFeatures(audioData) {
 }
 
 async function getAudioMetadata(file) {
-    const metadata = { title: '', artist: '', genre: '', album: '', year: '', track: '', picture: null };
+    const metadata = { title: '', artist: '', genre: '', album: '', year: '', track: '', picture: null, pictureData: null, pictureFormat: null, filename: '' };
     try {
         metadata.title = file.name.replace(/\.[^/.]+$/, "");
         const tags = await new Promise((resolve, reject) => { jsmediatags.read(file, { onSuccess: resolve, onError: reject }); }); // error
@@ -124,10 +125,16 @@ async function getAudioMetadata(file) {
         metadata.genre = tag.genre || tag.GENRE || ''; // tag.TCON || 
         metadata.year = tag.year || tag.TYER || tag.TDRC || '';
         metadata.track = tag.track || tag.TRCK || '';
+        metadata.filename = file.name;
         let picture = null;
         let format = "image/jpeg";
-        if (tag.picture) { picture = tag.picture.data; format = tag.picture.format }
-        else if (tag['covr']) { picture = (tag['covr'][0]).data; }
+        if (tag.picture) {
+            picture = tag.picture.data;
+            format = tag.picture.format;
+        }
+        else if (tag['covr']) {
+            picture = (tag['covr'][0]).data;
+        }
         if (picture != null) {
             let binary = '';
             const bytes = new Uint8Array(picture);
@@ -135,13 +142,16 @@ async function getAudioMetadata(file) {
                 binary += String.fromCharCode(bytes[i]);
             }
             metadata.picture = `data:${format};base64,${btoa(binary)}`;
+            metadata.pictureData = btoa(binary);
+            metadata.pictureFormat = format;
         }
     } catch (error) {
-       //console.warn('Error read metadata:', error);
+       console.warn('Error read metadata:', error);
     }
     return metadata;
 }
 
+let allMetadatas = [];
 async function getByAudioData(file) {
     let genre = '';
     let title = '';
@@ -204,13 +214,48 @@ async function getByAudioData(file) {
     if (/[а-яё]/i.test(title) || /[а-яё]/i.test(artist) || /[а-яё]/i.test(file.name)) {
         local = "ru";
     }
+    duration = Math.round(duration * 100) / 100;
+    allMetadatas.push(metadata);
     let result = { genre: genre, title: title, artist: artist, filename: file.name, duration: duration, local: local };
     return result;
 }
 
+async function getZip(metadatas, audiojsblob) {
+    const zip = new JSZip();
+    const zipFolder = zip.folder("audio");
+    let addedCount = 0;
+    for (let i = 0; i < metadatas.length; i++) {
+        try {
+            const metadata = metadatas[i];
+            if (metadata.pictureData) {
+                let extension = "jpg";
+                if (metadata.pictureFormat) {
+                    const format = metadata.pictureFormat.toLowerCase();
+                    if (format.includes("png")) extension = "png";
+                    else if (format.includes("gif")) extension = "gif";
+                    else if (format.includes("bmp")) extension = "bmp";
+                    else if (format.includes("webp")) extension = "webp";
+                }
+                const filename = metadata.filename;
+                const nameWithoutExt = filename.substring(0, filename.lastIndexOf('.'));
+                zipFolder.file(`${nameWithoutExt}.${extension}`, metadata.pictureData, { base64: true });
+                addedCount++;
+            }
+        } catch (e) {
+            console.warn("Error save binary:", e);
+        }
+    }
+    if (addedCount === 0) {
+        return;
+    }
+    zipFolder.file("audio.js", audiojsblob);
+    const content = await zip.generateAsync({ type: "blob" });
+    return content;
+}
+
 const audioFile = document.getElementById('audioFile');
 audioFile.addEventListener('change', async (event) => {
-    const files = event.target.files; // [0]
+    const files = event.target.files;
     let arr = [];
     const audioText = document.getElementById("audioText");
     for (let i = 0; i < files.length; i++) {
@@ -222,14 +267,15 @@ audioFile.addEventListener('change', async (event) => {
     audioText.innerHTML = "audio.js download";
     const jsonString = "let audiojson = " + JSON.stringify(arr, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = "audio.js";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const content = await getZip(allMetadatas, blob);
+    const urlzip = URL.createObjectURL(content);
+    const linkzip = document.createElement('a');
+    linkzip.href = urlzip;
+    linkzip.download = `audio${new Date().getTime()}.zip`;
+    document.body.appendChild(linkzip);
+    linkzip.click();
+    document.body.removeChild(linkzip);
+    URL.revokeObjectURL(urlzip);
 });
 </script>
 </body>
