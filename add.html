@@ -210,6 +210,13 @@ async function getByAudioData(file) {
         if (title == "" || title.includes("http")) { 
             title = newtitle.charAt(0).toUpperCase() + newtitle.slice(1);
         }
+        if (/^\d+$/.test(title)) {
+            const names = [ 'Vibe Track', 'Wonderful Track', 'Cast Iron Track', 'Running Track', 'Race Track', 'Best Track', 'Adventure Track', 'Fun Track' ];
+            const idnames = [ 'FM-', 'Fragment ', 'Code ', 'Code-', 'D', 'F', '#' ];
+            const sum = title.split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+            const num = parseInt(title, 10);
+            title = idnames[num % idnames.length] + sum + ' ' + names[sum % names.length];
+        }
     }
     if (/[а-яё]/i.test(title) || /[а-яё]/i.test(artist) || /[а-яё]/i.test(file.name)) {
         local = "ru";
@@ -263,9 +270,6 @@ async function getZip(metadatas, audiojsblob) {
             console.warn("Error save binary:", e);
         }
     }
-    if (addedCount === 0) {
-        return;
-    }
     zipFolder.file("audio.js", audiojsblob);
     const content = await zip.generateAsync({ type: "blob" });
     return content;
@@ -282,14 +286,15 @@ audioFile.addEventListener('change', async (event) => {
         console.log(result);
         audioText.innerHTML = result.filename + " (" + i + "/" + files.length + ")";
     }
-    audioText.innerHTML = "audio.js download";
+    const newFilename = `audio${new Date().getTime()}.zip`;
+    audioText.innerHTML = newFilename + " download";
     const jsonString = "let audiojson = " + JSON.stringify(arr, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const content = await getZip(allMetadatas, blob);
     const urlzip = URL.createObjectURL(content);
     const linkzip = document.createElement('a');
     linkzip.href = urlzip;
-    linkzip.download = `audio${new Date().getTime()}.zip`;
+    linkzip.download = newFilename;
     document.body.appendChild(linkzip);
     linkzip.click();
     document.body.removeChild(linkzip);
