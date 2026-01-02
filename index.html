@@ -226,10 +226,11 @@
         }
         
         .track-cover {
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             background-color: #333;
             flex-shrink: 0;
+            border-radius: 2.5px;
         }
         
         .track-details {
@@ -349,12 +350,25 @@
             font-size: 14px;
             margin-bottom: 4px;
             cursor: pointer;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-height: 2.8em;
+            line-height: 1.4em;
         }
         
         .player-artist {
             color: #b3b3b3;
             font-size: 12px;
             cursor: pointer;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-height: 1.7em;
+            line-height: 1.4em;
         }
         
         .player-controls {
@@ -404,7 +418,10 @@
         
         .progress-bar {
             width: 100%;
-            height: 4px;
+            height: 6px;
+            margin-top: 5px;
+            margin-left: 10px;
+            margin-right: 10px;
             background-color: #4d4d4d;
             border-radius: 2px;
             overflow: hidden;
@@ -497,7 +514,7 @@
             
             .sidebar {
                 width: 100%;
-                height: 70px;
+                height: 60px;
                 flex-direction: row;
                 justify-content: space-around;
                 padding: 0;
@@ -507,8 +524,30 @@
                 border-top: 1px solid #282828;
             }
 
+            .tracks-container {
+                padding: 0 10px 20px;
+                background-color: #121212;
+            }
+
             .player {
                 left: 0px;
+            }
+
+            .player-controls {
+                width: 100%;
+            }
+
+            .player-track {
+                gap: 12px;
+                width: 200px;
+            }
+
+            .player-title {
+                width: 68px;
+            }
+
+            .player-artist {
+                width: 68px;
             }
 
             .playlist-container {
@@ -537,7 +576,7 @@
                 font-size: 14px;
                 margin-bottom: 15px;
             }
-            
+
             .playlist-actions {
                 justify-content: center;
             }
@@ -554,7 +593,7 @@
                 display: none;
             }
 
-            .control-btn {
+            .player-extra {
                 display: none;
             }
         }
@@ -694,11 +733,12 @@
         const playerLike = document.getElementById('playerLike');
         const playerDislike = document.getElementById('playerDislike');
 
+        let playlistId = 0;
         let favoritePlaylist = [];
         let dislikePlaylist = [];
         let todayPlaylist = [];
         let currentPlaylist = [];
-        let playlistId = 0;
+        let avatarNotFound = []; // optimization call
         
         function formatTime(seconds){
             const secs = Math.floor(seconds % 60);
@@ -903,7 +943,7 @@
                     playerCover.style.backgroundSize = 'cover, cover, cover';
                     playerCover.style.backgroundBlendMode = 'screen';
                 } else {
-                    playerCover.style = 'background: linear-gradient(135deg,' + stringToColor(track.filename) + ',' + stringToColor(track.filename + "1") + ')';
+                    playerCover.style.background = 'linear-gradient(135deg,' + stringToColor(track.filename) + ',' + stringToColor(track.filename + "1") + ')';
                     playerCover.style.backgroundSize = 'cover';
                     playerCover.style.backgroundPosition = 'center';
                 }
@@ -939,6 +979,7 @@
                 trackElement.id = (playlistId === i ? 'currentTrack' : '');
                 trackElement.dataset.playlistid = i;
                 trackElement.dataset.filename = track.filename;
+                if (isDisliked) { trackElement.style.opacity = '0.7'; }
                 trackInfo.className = "track-info";
                 playIcon.className = "track-play-icon";
                 playIcon.innerHTML = '<i class="fas fa-play"></i>';
@@ -1045,14 +1086,16 @@
                     e.stopPropagation();
                     const filename = this.dataset.filename;
                     const disliked = toggleDislike(filename);
+                    const row = this.closest('.track-row');
                     if (disliked) {
                         this.classList.add('dislike-active');
                         this.innerHTML = '<i class="fas fa-thumbs-down"></i>';
+                        row.style.opacity = '0.7';
                     } else {
                         this.classList.remove('dislike-active');
                         this.innerHTML = '<i class="far fa-thumbs-down"></i>';
+                        row.style.opacity = '1';
                     }
-                    const row = this.closest('.track-row');
                     const likeBtn = row.querySelector('.track-like');
                     if (likeBtn) {
                         likeBtn.classList.remove('like-active');
