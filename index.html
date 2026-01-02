@@ -69,6 +69,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            padding-bottom: 80px;
         }
         
         .playlist-container {
@@ -184,6 +185,7 @@
             cursor: pointer;
             transition: background-color 0.2s;
             gap: 20px;
+            min-width: 0;
         }
         
         .track-row:hover {
@@ -196,6 +198,7 @@
             align-items: center;
             gap: 16px;
             flex: 1;
+            min-width: 0;
         }
 
         .track-play-icon {
@@ -277,11 +280,29 @@
         .track-like:hover {
             color: #1db954;
         }
-        
+
         .playing {
             background-color: rgba(29, 185, 84, 0.1);
         }
-        
+
+        .track-dislike {
+            color: #b3b3b3;
+            font-size: 18px;
+            transition: color 0.2s;
+            cursor: pointer;
+            width: 30px;
+            text-align: center;
+            margin-right: 10px;
+        }
+
+        .track-dislike:hover {
+            color: #ff4444;
+        }
+
+        .dislike-active {
+            color: #ff4444;
+        }
+
         .like-active {
             color: #1db954;
         }
@@ -457,6 +478,79 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #3a3a3a;
         }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding-bottom: 70px;
+                overflow-y: auto;
+            }
+
+            body {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 70px;
+                flex-direction: row;
+                justify-content: space-around;
+                padding: 0;
+                top: 0;
+                left: 0;
+                right: 0;
+                border-top: 1px solid #282828;
+            }
+
+            .player {
+                left: 0px;
+            }
+
+            .playlist-container {
+                order: 1;
+            }
+            
+            .playlist-header {
+                flex-direction: column;
+                text-align: center;
+                padding: 20px 15px;
+                gap: 15px;
+            }
+            
+            .playlist-cover {
+                width: 150px;
+                height: 150px;
+                margin: 0 auto;
+            }
+            
+            .playlist-title {
+                font-size: 32px;
+                line-height: 1.2;
+            }
+            
+            .playlist-description {
+                font-size: 14px;
+                margin-bottom: 15px;
+            }
+            
+            .playlist-actions {
+                justify-content: center;
+            }
+
+            .logo {
+                display: none;
+            }
+
+            .playlist-stats {
+                display: none;
+            }
+
+            #playlistActionPlay {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -476,7 +570,7 @@
         </div>
         <div class="nav-item" id="menuPlus">
             <div class="nav-icon">
-                <i class="fas fa-plus"></i>
+                <i class="fas fa-ban"></i>
             </div>
         </div>
         <div class="nav-item" id="menuFavorite">
@@ -505,7 +599,7 @@
                         <button class="play-btn" id="mainPlayBtn">
                             <i class="fas fa-play"></i>
                         </button>
-                        <button class="like-btn">
+                        <button class="like-btn" id="playlistActionPlay">
                             <i class="fas fa-heart"></i>
                         </button>
                     </div>
@@ -517,7 +611,7 @@
         </div>
         <div class="player">
             <audio id="audioPlayer" preload="metadata">
-                <source src="audio/test.mp3" type="audio/mpeg">
+                <source src="" type="audio/mpeg">
             </audio>
             <div class="player-track">
                 <div class="player-cover" id="playerCover" style="background: linear-gradient(135deg, #ff9a9e, #fad0c4);"></div>
@@ -528,7 +622,7 @@
             </div>
             <div class="player-controls">
                 <div class="control-buttons">
-                    <div class="track-like like-active">
+                    <div class="track-like like-active" id="playerLike">
                         <i class="fas fa-heart"></i>
                     </div>
                     <button class="control-btn" id="prevTrackBtn">
@@ -540,9 +634,9 @@
                     <button class="control-btn" id="nextTrackBtn">
                         <i class="fas fa-step-forward"></i>
                     </button>
-                    <button class="control-btn">
-                        <i class="far fa-heart" style="position:relative;"><span style="position:absolute; top:50%; left:55%; transform:translate(-50%,-50%) rotate(40deg); width:25px; height:3px; background-color:#ddd; border-radius:1px;"></span></i>
-                    </button>
+                    <div class="track-dislike" id="playerDislike">
+                        <i class="fas fa-thumbs-down"></i>
+                    </div>
                 </div>
                 <div class="player-time">
                     <span id="currentTimeEl">0:00</span>
@@ -590,7 +684,15 @@
         const playlistTitle = document.getElementById('playlistTitle');
         const playlistDescription = document.getElementById('playlistDescription');
         const playlistCover = document.getElementById('playlistCover');
+        const playerLike = document.getElementById('playerLike');
+        const playerDislike = document.getElementById('playerDislike');
 
+        let favoritePlaylist = [];
+        let dislikePlaylist = [];
+        let todayPlaylist = [];
+        let currentPlaylist = [];
+        let playlistId = 0;
+        
         function formatTime(seconds){
             const secs = Math.floor(seconds % 60);
             return `${Math.floor(seconds / 60)}:${secs < 10 ? '0' : ''}${secs}`;
@@ -605,6 +707,19 @@
             return "#" + "00000".substring(0, 6 - c.length) + c;
         }
 
+        function stringToId(str, max = 4294967295) {
+            let hash = 5381;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
+                hash = hash ^ (hash >>> 16);
+            }
+            hash = hash ^ (hash >>> 13);
+            hash = hash ^ (hash << 7);
+            hash = hash ^ (hash >>> 17);
+            hash = hash >>> 0;
+            return hash % (max + 1);;
+        }
+
         progressBar.addEventListener('click', function(e) {
             const clickPosition = e.offsetX;
             const progressBarWidth = this.offsetWidth;
@@ -615,30 +730,27 @@
             }
         });
 
-        menuFavorite.addEventListener('click', function() {
-            menuFavorite.classList.add('active');
-            menuHome.classList.remove('active');
-            menuPlus.classList.remove('active');
-            menuSearch.classList.remove('active');
-            playlistHeader.style.background = "linear-gradient(180deg, #4c192c 0%, #121212 100%)";
-            playlistTitle.innerHTML = "Favorite";
-            playlistDescription.innerHTML = "Your favorite track";
-            playlistCover.style.background = "linear-gradient(135deg, #e94057, #8a2387, #f27121)";
-            playlistCover.innerHTML = '<i class="fas fa-heart"></i>';
-            generateByPlaylist(playlistFavorite);
-        });
+        menuHome.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
+        menuFavorite.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
+        menuSearch.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
+        menuPlus.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
 
         menuHome.addEventListener('click', function() {
             menuHome.classList.add('active');
             menuFavorite.classList.remove('active');
             menuPlus.classList.remove('active');
             menuSearch.classList.remove('active');
-            playlistHeader.style.background = "linear-gradient(180deg, #2a5d3d 0%, #121212 100%)";
-            playlistTitle.innerHTML = "Playlist Every Day";
-            playlistDescription.innerHTML = "Every day belongs to you!";
-            playlistCover.style.background = "";
-            playlistCover.innerHTML = '<i class="fas fa-headphones"></i>';
-            generateByPlaylist(playlistTodayDay);
+            generateTodayPlaylist();
+            currentPlaylist = todayPlaylist;
+        });
+
+        menuFavorite.addEventListener('click', function() {
+            menuFavorite.classList.add('active');
+            menuHome.classList.remove('active');
+            menuPlus.classList.remove('active');
+            menuSearch.classList.remove('active');
+            generateFavoritePlaylist();
+            currentPlaylist = favoritePlaylist;
         });
 
         menuSearch.addEventListener('click', function() {
@@ -653,12 +765,12 @@
             menuHome.classList.remove('active');
             menuFavorite.classList.remove('active');
             menuSearch.classList.remove('active');
+            generateDislikePlaylist();
+            currentPlaylist = dislikePlaylist;
         });
 
         volumeBar.addEventListener('click', function(e) {
-            const clickPosition = e.offsetX;
-            const volumeBarWidth = this.offsetWidth;
-            const newVolume = clickPosition / volumeBarWidth;
+            const newVolume = e.offsetX / this.offsetWidth;
             audioPlayer.volume = newVolume;
             volumeLevel.style.width = `${newVolume * 100}%`;
             const volumeIcon = document.querySelector('.volume-icon');
@@ -677,15 +789,25 @@
         });
 
         nextTrackBtn.addEventListener('click', function() {
-            if (playlistId + 1 < playlistTodayDay.length) { playlistId++; }
-            updatePlayer(playlistTodayDay[playlistId]);
+            if (playlistId + 1 < currentPlaylist.length) { playlistId++; }
+            updatePlayer(currentPlaylist[playlistId]);
             audioPlayer.play();
         });
 
         prevTrackBtn.addEventListener('click', function() {
             if (playlistId > 0) { playlistId--; }
-            updatePlayer(playlistTodayDay[playlistId]);
+            updatePlayer(currentPlaylist[playlistId]);
             audioPlayer.play();
+        });
+
+        playerLike.addEventListener('click', function() {
+            const currentTrack = currentPlaylist[playlistId];
+            if (currentTrack) { toggleFavorite(currentTrack.filename); }
+        });
+
+        playerDislike.addEventListener('click', function() {
+            const currentTrack = currentPlaylist[playlistId];
+            if (currentTrack) { toggleDislike(currentTrack.filename); }
         });
 
         audioPlayer.addEventListener('play', function() {
@@ -716,86 +838,297 @@
             nextTrackBtn.click();
         });
 
-        function stringToId(str, max = 4294967295) {
-            let hash = 5381;
-            const len = str.length;
-            for (let i = 0; i < len; i++) {
-                hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
-                hash = hash ^ (hash >>> 16);
+        function toggleFavorite(filename) {
+            const favoriteFilenames = favoritePlaylist.map(track => track.filename);
+            const dislikeFilenames = dislikePlaylist.map(track => track.filename);
+            const favoriteIndex = favoriteFilenames.indexOf(filename);
+            const dislikeIndex = dislikeFilenames.indexOf(filename);
+            
+            if (favoriteIndex === -1) {
+                const track = audiojson.find(track => track.filename === filename);
+                if (track) {
+                    favoritePlaylist.unshift(track);
+                    favoriteFilenames.unshift(filename);
+                    if (dislikeIndex !== -1) {
+                        dislikePlaylist.splice(dislikeIndex, 1);
+                        dislikeFilenames.splice(dislikeIndex, 1);
+                    }
+                }
+            } else {
+                favoritePlaylist.splice(favoriteIndex, 1);
+                favoriteFilenames.splice(favoriteIndex, 1);
             }
-            hash = hash ^ (hash >>> 13);
-            hash = hash ^ (hash << 7);
-            hash = hash ^ (hash >>> 17);
-            hash = hash >>> 0;
-            return hash % (max + 1);;
+            localStorage.setItem('favoritePlaylist', JSON.stringify(favoriteFilenames));
+            localStorage.setItem('dislikePlaylist', JSON.stringify(dislikeFilenames));
+            return favoriteIndex === -1;
         }
 
-        function getOneTrack(algoritm) {
-            return audiojson[Math.floor(Math.random() * audiojson.length)];
+        function toggleDislike(filename) {
+            const favoriteFilenames = favoritePlaylist.map(track => track.filename);
+            const dislikeFilenames = dislikePlaylist.map(track => track.filename);
+            const favoriteIndex = favoriteFilenames.indexOf(filename);
+            const dislikeIndex = dislikeFilenames.indexOf(filename);
+            if (dislikeIndex === -1) {
+                const track = audiojson.find(track => track.filename === filename);
+                if (track) {
+                    dislikePlaylist.unshift(track);
+                    dislikeFilenames.unshift(filename);
+                    if (favoriteIndex !== -1) {
+                        favoritePlaylist.splice(favoriteIndex, 1);
+                        favoriteFilenames.splice(favoriteIndex, 1);
+                    }
+                }
+            } else {
+                dislikePlaylist.splice(dislikeIndex, 1);
+                dislikeFilenames.splice(dislikeIndex, 1);
+            }
+            localStorage.setItem('favoritePlaylist', JSON.stringify(favoriteFilenames));
+            localStorage.setItem('dislikePlaylist', JSON.stringify(dislikeFilenames));
+            return dislikeIndex === -1;
         }
 
         function updatePlayer(track) {
             audioPlayer.src = `audio/${track.filename}`;
             playerTitle.textContent = track.title;
             playerArtist.textContent = track.artist;
-            playerCover.style = 'background: linear-gradient(135deg,' + stringToColor(track.filename) + ',' + stringToColor(track.filename + "1") + ')';
+            const imagePath = `audio/${track.filename.replace('.mp3', '.jpg')}`;
+            const testImage = new Image();
+            testImage.onload = function() {
+                playerCover.style.background = `url('${imagePath}')`;
+                playerCover.style.backgroundSize = 'cover';
+                playerCover.style.backgroundPosition = 'center';
+                playerCover.style.backgroundBlendMode = 'overlay';
+            };
+            testImage.onerror = function() {
+                if (track.filename.length % 2 == 0) {
+                    const color1 = stringToColor(track.artist);
+                    const color2 = stringToColor(track.title);
+                    const color3 = stringToColor(track.artist + track.title);
+                    playerCover.style.background = `radial-gradient(circle at 30% 20%, ${color1}40, transparent 40%),
+                        radial-gradient(circle at 70% 80%, ${color2}30, transparent 30%),
+                        linear-gradient(135deg, ${color1}20, ${color3}40, ${color2}20)`;
+                    playerCover.style.backgroundSize = 'cover, cover, cover';
+                    playerCover.style.backgroundBlendMode = 'screen';
+                } else {
+                    playerCover.style = 'background: linear-gradient(135deg,' + stringToColor(track.filename) + ',' + stringToColor(track.filename + "1") + ')';
+                    playerCover.style.backgroundSize = 'cover';
+                    playerCover.style.backgroundPosition = 'center';
+                }
+            };
+            testImage.src = imagePath;
         }
 
         function getTodayPlaylist() {
             const playlist = [];
-            for (let j = 0; j < 30; j++) {
-                const track = getOneTrack();
-                playlist.push(track);
+            for (let j = 0; j < 50; j++) {
+                let track = null;
+                track = audiojson[Math.floor(Math.random() * audiojson.length)];
+                if (!dislikePlaylist.includes(track) && !playlist.includes(track)) {
+                    playlist.push(track);
+                } else if (Math.random() > 0.9) {
+                    j -= 1;
+                }
             }
             return playlist;
         }
 
-        function generateByPlaylist(playlist) {
-            trackList.innerHTML = "";
-            for (let i = 0; i < playlist.length; i++) {
-                const track = playlist[i];
-                const isLiked = false;
-                const trackHTML = `<div class="track-row" data-playlistid="${i}" data-filename="${track.filename}">
-                    <div class="track-info">
-                        <div class="track-play-icon">
-                            <i class="fas fa-play"></i>
-                        </div>
-                        <div class="track-cover" style="background: linear-gradient(135deg, ${stringToColor(track.filename)}, ${stringToColor(track.filename + "1")})"></div>
-                        <div class="track-details">
-                            <div class="track-title">${track.title}</div>
-                            <div class="track-artist">${track.artist}</div>
-                        </div>
-                    </div>
-                    <div class="track-time">
-                        <div class="track-duration">${formatTime(track.duration)}</div>
-                        <div class="track-like ${isLiked ? 'like-active' : ''}">
-                            <i class="far fa-heart"></i>
-                        </div>
-                    </div>
-                </div>`;
-                trackList.innerHTML += trackHTML;
+        function generateHtmlByPlaylist(playlistTracks) {
+            if (playlistTracks.length > 0) { trackList.innerHTML = ""; }
+            for (let i = 0; i < playlistTracks.length; i++) {
+                const track = playlistTracks[i];
+                const isLiked = favoritePlaylist.includes(track);
+                const isDisliked = dislikePlaylist.includes(track);
+                const trackElement = document.createElement("div");
+                const trackInfo = document.createElement("div");
+                const playIcon = document.createElement("div");
+                const cover = document.createElement("div");
+                trackElement.className = "track-row";
+                trackElement.id = (playlistId === i ? 'currentTrack' : '');
+                trackElement.dataset.playlistid = i;
+                trackElement.dataset.filename = track.filename;
+                trackInfo.className = "track-info";
+                playIcon.className = "track-play-icon";
+                playIcon.innerHTML = '<i class="fas fa-play"></i>';
+                cover.className = "track-cover";
+                const imagePath = `audio/${track.filename.replace('.mp3', '.jpg')}`;
+                const testImage = new Image();
+                testImage.onload = function() {
+                    cover.style.background = `url('${imagePath}')`;
+                    cover.style.backgroundSize = 'cover';
+                    cover.style.backgroundPosition = 'center';
+                    cover.style.backgroundBlendMode = 'overlay';
+                };
+                testImage.onerror = function() {
+                    if (track.filename.length % 2 == 0) {
+                        const color1 = stringToColor(track.artist);
+                        const color2 = stringToColor(track.title);
+                        const color3 = stringToColor(track.artist + track.title);
+                        cover.style.background = `radial-gradient(circle at 30% 20%, ${color1}40, transparent 40%),
+                            radial-gradient(circle at 70% 80%, ${color2}30, transparent 30%),
+                            linear-gradient(135deg, ${color1}20, ${color3}40, ${color2}20)`;
+                        cover.style.backgroundSize = 'cover, cover, cover';
+                        cover.style.backgroundBlendMode = 'screen';
+                    } else {
+                        cover.style = 'background: linear-gradient(135deg,' + stringToColor(track.filename) + ',' + stringToColor(track.filename + "1") + ')';
+                        cover.style.backgroundSize = 'cover';
+                        cover.style.backgroundPosition = 'center';
+                    }
+                };
+                testImage.src = imagePath;
+                const trackDetails = document.createElement("div");
+                const trackTitle = document.createElement("div");
+                const trackArtist = document.createElement("div");
+                trackDetails.className = "track-details";
+                trackTitle.className = "track-title";
+                trackArtist.className = "track-artist";
+                trackTitle.textContent = track.title;
+                trackArtist.textContent = track.artist;
+                trackDetails.appendChild(trackTitle);
+                trackDetails.appendChild(trackArtist);
+                trackInfo.appendChild(playIcon);
+                trackInfo.appendChild(cover);
+                trackInfo.appendChild(trackDetails);
+                const trackTime = document.createElement("div");
+                const trackDuration = document.createElement("div");
+                const likeButton = document.createElement("div");
+                const dislikeButton = document.createElement("div");
+                trackTime.className = "track-time";
+                trackDuration.className = "track-duration";
+                trackDuration.textContent = formatTime(track.duration);
+                likeButton.className = `track-like ${isLiked ? 'like-active' : ''}`;
+                likeButton.dataset.filename = track.filename;
+                likeButton.innerHTML = `<i class="${isLiked ? 'fas' : 'far'} fa-heart"></i>`;
+                dislikeButton.className = `track-dislike ${isDisliked ? 'dislike-active' : ''}`;
+                dislikeButton.dataset.filename = track.filename;
+                dislikeButton.innerHTML = `<i class="${isDisliked ? 'fas' : 'far'} fa-thumbs-down"></i>`;
+                trackTime.appendChild(trackDuration);
+                trackTime.appendChild(likeButton);
+                trackTime.appendChild(dislikeButton);
+                trackElement.appendChild(trackInfo);
+                trackElement.appendChild(trackTime);
+                trackList.appendChild(trackElement);
             }
+            // add like/dislike work:
             const allTrackRows = trackList.querySelectorAll('.track-row');
-            allTrackRows.forEach(row => { row.addEventListener('click', handleTrackClick); });
+            const allLikeButtons = trackList.querySelectorAll('.track-like');
+            const allDislikeButtons = trackList.querySelectorAll('.track-dislike');
+            allTrackRows.forEach(row => { 
+                row.addEventListener('click', function(e) {
+                    if (e.target.closest('.track-play-icon') || e.target.classList.contains('track-play-icon')) {
+                        const oldPlaylistId = playlistId;
+                        const oldTrack = document.getElementById('currentTrack');
+                        playlistId = parseInt(e.currentTarget.dataset.playlistid);
+                        if (oldTrack) oldTrack.classList.remove('playing');
+                        oldTrack?.removeAttribute('id');
+                        e.currentTarget.classList.add('playing');
+                        e.currentTarget.id = 'currentTrack';
+                        updatePlayer(currentPlaylist[playlistId]);
+                        audioPlayer.play();
+                    }
+                }); 
+            });
+            allLikeButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const filename = this.dataset.filename;
+                    const liked = toggleFavorite(filename);
+                    if (liked) {
+                        this.classList.add('like-active');
+                        this.innerHTML = '<i class="fas fa-heart"></i>';
+                    } else {
+                        this.classList.remove('like-active');
+                        this.innerHTML = '<i class="far fa-heart"></i>';
+                    }
+                    const row = this.closest('.track-row');
+                    const dislikeBtn = row.querySelector('.track-dislike');
+                    if (dislikeBtn) {
+                        dislikeBtn.classList.remove('dislike-active');
+                        dislikeBtn.innerHTML = '<i class="far fa-thumbs-down"></i>';
+                    }
+                });
+            });
+            allDislikeButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const filename = this.dataset.filename;
+                    const disliked = toggleDislike(filename);
+                    if (disliked) {
+                        this.classList.add('dislike-active');
+                        this.innerHTML = '<i class="fas fa-thumbs-down"></i>';
+                    } else {
+                        this.classList.remove('dislike-active');
+                        this.innerHTML = '<i class="far fa-thumbs-down"></i>';
+                    }
+                    const row = this.closest('.track-row');
+                    const likeBtn = row.querySelector('.track-like');
+                    if (likeBtn) {
+                        likeBtn.classList.remove('like-active');
+                        likeBtn.innerHTML = '<i class="far fa-heart"></i>';
+                    }
+                });
+            });
         }
 
-        function handleTrackClick(event) {
-            if (event.target.closest('.track-play-icon') || event.target.classList.contains('track-play-icon')) {
-                const oldPlaylistId = playlistId;
-                playlistId = parseInt(event.currentTarget.dataset.playlistid);
-                updatePlayer(playlistTodayDay[playlistId]);
-                audioPlayer.play();
+        function generateFavoritePlaylist() {
+            playlistDescription.innerHTML = "Your favorite track";
+            playlistHeader.style.background = "linear-gradient(180deg, #4c192c 0%, #121212 100%)";
+            playlistTitle.innerHTML = "Favorite";
+            playlistCover.style.background = "linear-gradient(135deg, #e94057, #8a2387, #f27121)";
+            playlistCover.innerHTML = '<i class="fas fa-heart"></i>';
+            if (favoritePlaylist.length === 0) {
+                trackList.innerHTML = '<div style="padding: 40px; text-align: center; color: #b3b3b3;">No favorite tracks yet</div>';
+                return;
             }
+            generateHtmlByPlaylist(favoritePlaylist);
         }
 
-        let playlistId = 0;
-        let playlistTodayDay = [];
-        let playlistFavorite = [];
+        function generateTodayPlaylist() {
+            playlistDescription.innerHTML = "Every day belongs to you!";
+            playlistHeader.style.background = "linear-gradient(180deg, #2a5d3d 0%, #121212 100%)";
+            playlistTitle.innerHTML = "Playlist Every Day";
+            playlistCover.style.background = "";
+            playlistCover.innerHTML = '<i class="fas fa-headphones"></i>';
+            if (todayPlaylist.length === 0) {
+                trackList.innerHTML = '<div style="padding: 40px; text-align: center; color: #b3b3b3;">Music not found</div>';
+                return;
+            }
+            generateHtmlByPlaylist(todayPlaylist);
+        }
+
+        function generateDislikePlaylist() {
+            playlistDescription.innerHTML = "Damm this track like shit!";
+            playlistHeader.style.background = "linear-gradient(180deg, #170000 0%, #121212 100%)";
+            playlistTitle.innerHTML = "Block Track";
+            playlistCover.style.background = "linear-gradient(135deg, #b0b0b0, #707070, #3a3a3a)";
+            playlistCover.innerHTML = '<i class="fas fa-ban"></i>'; //thumbs-down
+            if (dislikePlaylist.length === 0) {
+                trackList.innerHTML = '<div style="padding: 40px; text-align: center; color: #b3b3b3;">No dislike tracks yet</div>';
+                return;
+            }
+            generateHtmlByPlaylist(dislikePlaylist);
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
-            playlistTodayDay = getTodayPlaylist();
-            playlistFavorite = getTodayPlaylist();
-            generateByPlaylist(playlistTodayDay);
-            updatePlayer(playlistTodayDay[playlistId]);
+            const favorite = JSON.parse(localStorage.getItem('favoritePlaylist')) || [];
+            for (let i = 0; i < favorite.length; i++) {
+                for (let j = 0; j < audiojson.length; j++) {
+                    if (favorite[i] == audiojson[j].filename) {
+                        favoritePlaylist.push(audiojson[j]);
+                    }
+                }
+            }
+            const dislike = JSON.parse(localStorage.getItem('dislikePlaylist')) || [];
+            for (let i = 0; i < dislike.length; i++) {
+                for (let j = 0; j < audiojson.length; j++) {
+                    if (dislike[i] == audiojson[j].filename) {
+                        dislikePlaylist.push(audiojson[j]);
+                    }
+                }
+            }
+            todayPlaylist = getTodayPlaylist();
+            generateTodayPlaylist();
+            currentPlaylist = todayPlaylist;
+            updatePlayer(todayPlaylist[playlistId]);
         });
     </script>
 </body>
