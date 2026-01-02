@@ -203,16 +203,18 @@
 
         .track-play-icon {
             position: absolute;
-            left: 12px;
+            left: -5px;
             top: 50%;
             transform: translateY(-50%);
             color: white;
-            font-size: 16px;
+            font-size: 20px;
             opacity: 0;
             transition: opacity 0.2s;
             z-index: 1;
-            width: 50px;
-            height: 20px;
+            width: 27px;
+            height: 28px;
+            padding: 14px 18px;
+            box-sizing: content-box;
         }
 
         .track-row:hover .track-play-icon {
@@ -334,6 +336,7 @@
             width: 56px;
             height: 56px;
             background-color: #333;
+            flex-shrink: 0;
         }
         
         .player-info {
@@ -550,6 +553,10 @@
             #playlistActionPlay {
                 display: none;
             }
+
+            .control-btn {
+                display: none;
+            }
         }
     </style>
 </head>
@@ -568,7 +575,7 @@
                 <i class="fas fa-search"></i>
             </div>
         </div>
-        <div class="nav-item" id="menuPlus">
+        <div class="nav-item" id="menuBan">
             <div class="nav-icon">
                 <i class="fas fa-ban"></i>
             </div>
@@ -678,7 +685,7 @@
         const trackList = document.getElementById('trackList');
         const menuFavorite = document.getElementById('menuFavorite');
         const menuHome = document.getElementById('menuHome');
-        const menuPlus = document.getElementById('menuPlus');
+        const menuBan = document.getElementById('menuBan');
         const menuSearch = document.getElementById('menuSearch');
         const playlistHeader = document.getElementById('playlistHeader');
         const playlistTitle = document.getElementById('playlistTitle');
@@ -707,19 +714,6 @@
             return "#" + "00000".substring(0, 6 - c.length) + c;
         }
 
-        function stringToId(str, max = 4294967295) {
-            let hash = 5381;
-            for (let i = 0; i < str.length; i++) {
-                hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
-                hash = hash ^ (hash >>> 16);
-            }
-            hash = hash ^ (hash >>> 13);
-            hash = hash ^ (hash << 7);
-            hash = hash ^ (hash >>> 17);
-            hash = hash >>> 0;
-            return hash % (max + 1);;
-        }
-
         progressBar.addEventListener('click', function(e) {
             const clickPosition = e.offsetX;
             const progressBarWidth = this.offsetWidth;
@@ -733,12 +727,12 @@
         menuHome.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
         menuFavorite.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
         menuSearch.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
-        menuPlus.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
+        menuBan.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
 
         menuHome.addEventListener('click', function() {
             menuHome.classList.add('active');
             menuFavorite.classList.remove('active');
-            menuPlus.classList.remove('active');
+            menuBan.classList.remove('active');
             menuSearch.classList.remove('active');
             generateTodayPlaylist();
             currentPlaylist = todayPlaylist;
@@ -747,7 +741,7 @@
         menuFavorite.addEventListener('click', function() {
             menuFavorite.classList.add('active');
             menuHome.classList.remove('active');
-            menuPlus.classList.remove('active');
+            menuBan.classList.remove('active');
             menuSearch.classList.remove('active');
             generateFavoritePlaylist();
             currentPlaylist = favoritePlaylist;
@@ -757,11 +751,11 @@
             menuSearch.classList.add('active');
             menuHome.classList.remove('active');
             menuFavorite.classList.remove('active');
-            menuPlus.classList.remove('active');
+            menuBan.classList.remove('active');
         });
 
-        menuPlus.addEventListener('click', function() {
-            menuPlus.classList.add('active');
+        menuBan.addEventListener('click', function() {
+            menuBan.classList.add('active');
             menuHome.classList.remove('active');
             menuFavorite.classList.remove('active');
             menuSearch.classList.remove('active');
@@ -843,7 +837,6 @@
             const dislikeFilenames = dislikePlaylist.map(track => track.filename);
             const favoriteIndex = favoriteFilenames.indexOf(filename);
             const dislikeIndex = dislikeFilenames.indexOf(filename);
-            
             if (favoriteIndex === -1) {
                 const track = audiojson.find(track => track.filename === filename);
                 if (track) {
@@ -1017,11 +1010,11 @@
                     if (e.target.closest('.track-play-icon') || e.target.classList.contains('track-play-icon')) {
                         const oldPlaylistId = playlistId;
                         const oldTrack = document.getElementById('currentTrack');
-                        playlistId = parseInt(e.currentTarget.dataset.playlistid);
                         if (oldTrack) oldTrack.classList.remove('playing');
                         oldTrack?.removeAttribute('id');
                         e.currentTarget.classList.add('playing');
                         e.currentTarget.id = 'currentTrack';
+                        playlistId = parseInt(e.currentTarget.dataset.playlistid);
                         updatePlayer(currentPlaylist[playlistId]);
                         audioPlayer.play();
                     }
