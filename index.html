@@ -825,9 +825,9 @@
         mainPlayBtn.addEventListener('click', function() {
             if (audioPlayer.paused) {
                 const lastPlaylistLength = currentPlaylist.length;
-                if (currentPage == "today") { currentPlaylist = todayPlaylist; }
-                if (currentPage == "dislike") { currentPlaylist = dislikePlaylist; }
-                if (currentPage == "favorite") { currentPlaylist = favoritePlaylist; }
+                if (currentPage == "today") { currentPlaylist = Array.from(todayPlaylist); }
+                if (currentPage == "dislike") { currentPlaylist = Array.from(dislikePlaylist); }
+                if (currentPage == "favorite") { currentPlaylist = Array.from(favoritePlaylist); }
                 if (currentPlaylist.length > 0 && currentPlaylist.length != lastPlaylistLength) { // be carefull this work but if lastPlaylistLength other
                     playlistId = 0;
                     updatePlayer(currentPlaylist[playlistId]);
@@ -1167,9 +1167,9 @@
                             else { audioPlayer.pause(); }
                         } else {
                             playlistId = parseInt(e.currentTarget.dataset.playlistid);
-                            if (currentPage == "today") { currentPlaylist = todayPlaylist; }
-                            if (currentPage == "dislike") { currentPlaylist = dislikePlaylist; }
-                            if (currentPage == "favorite") { currentPlaylist = favoritePlaylist; }
+                            if (currentPage == "today") { currentPlaylist = Array.from(todayPlaylist); }
+                            if (currentPage == "dislike") { currentPlaylist = Array.from(dislikePlaylist); }
+                            if (currentPage == "favorite") { currentPlaylist = Array.from(favoritePlaylist); }
                             updatePlayer(currentPlaylist[playlistId]);
                             audioPlayer.play();
                         }
@@ -1295,23 +1295,24 @@
                         }
                     }
                 }
+                if (daily.length == 0) { localStorage.removeItem("nextTodayPlaylistDate"); }
             }
             currentPage = new URLSearchParams(window.location.search).get('page');
             if (currentPage == "favorite") {
-                currentPlaylist = favoritePlaylist;
+                currentPlaylist = Array.from(favoritePlaylist);
                 generateFavoritePlaylist();
                 menuHome.classList.remove('active');
                 menuFavorite.classList.add('active');
             }
             else if (currentPage == "dislike") {
-                currentPlaylist = dislikePlaylist;
+                currentPlaylist = Array.from(dislikePlaylist);
                 generateDislikePlaylist();
                 menuHome.classList.remove('active');
                 menuBan.classList.add('active');
             }
             else {
                 currentPage = "today";
-                currentPlaylist = todayPlaylist;
+                currentPlaylist = Array.from(todayPlaylist);
                 generateTodayPlaylist();
             }
             const savedVolume = localStorage.getItem('playerVolume');
