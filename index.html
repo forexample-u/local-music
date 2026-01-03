@@ -775,6 +775,11 @@
             menuSearch.classList.remove('active');
             generateTodayPlaylist();
             currentPage = "today";
+            try {
+                history.pushState({page: currentPage}, '', window.location.pathname);
+            } catch {
+                history.pushState({page: currentPage}, '', `?page=${currentPage}`);
+            }
         });
 
         menuFavorite.addEventListener('click', function() {
@@ -784,6 +789,7 @@
             menuSearch.classList.remove('active');
             generateFavoritePlaylist();
             currentPage = "favorite";
+            history.pushState({page: currentPage}, '', `?page=${currentPage}`);
         });
 
         menuSearch.addEventListener('click', function() {
@@ -800,6 +806,7 @@
             menuSearch.classList.remove('active');
             generateDislikePlaylist();
             currentPage = "dislike";
+            history.pushState({page: currentPage}, '', `?page=${currentPage}`);
         });
 
         volumeBar.addEventListener('click', function(e) {
@@ -1233,7 +1240,7 @@
             }
             generateHtmlByPlaylist(dislikePlaylist);
         }
-        
+
         document.addEventListener('DOMContentLoaded', function() {
             const favorite = JSON.parse(localStorage.getItem('favoritePlaylist')) || [];
             for (let i = 0; i < favorite.length; i++) {
@@ -1252,9 +1259,20 @@
                 }
             }
             todayPlaylist = getTodayPlaylist();
-            generateTodayPlaylist();
-            currentPlaylist = todayPlaylist;
-            updatePlayer(todayPlaylist[playlistId]);
+            let lastTodayPlaylistDate = localStorage.getItem('lastTodayPlaylistDate');
+            const daily = JSON.parse(localStorage.getItem('dailyPlaylist')) || [];
+            for (let i = 0; i < daily.length; i++) {
+                for (let j = 0; j < audiojson.length; j++) {
+                    if (daily[i]  == audiojson[j].filename) {
+                        todayPlaylist.push(audiojson[i]);
+                    }
+                }
+            }
+            const page = new URLSearchParams(window.location.search).get('page');
+            if (page == "favorite") { currentPlaylist = favoritePlaylist; generateFavoritePlaylist(); menuHome.classList.remove('active'); menuFavorite.classList.add('active'); }
+            else if (page == "dislike") { currentPlaylist = dislikePlaylist; generateDislikePlaylist(); menuHome.classList.remove('active'); menuBan.classList.add('active'); }
+            else { currentPlaylist = todayPlaylist; generateTodayPlaylist(); }
+            updatePlayer(currentPlaylist[playlistId]);
         });
     </script>
 </body>
