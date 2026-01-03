@@ -819,6 +819,7 @@
             const volumeIcon = document.querySelector('.volume-icon');
             if (newVolume === 0) { volumeIcon.className = 'fas fa-volume-mute volume-icon'; }
             else { volumeIcon.className = 'fas fa-volume-up volume-icon'; }
+            localStorage.setItem('playerVolume', newVolume.toString());
         });
 
         mainPlayBtn.addEventListener('click', function() {
@@ -1058,6 +1059,7 @@
                 }
             };
             testImage.src = imagePath;
+            localStorage.setItem("track", JSON.stringify(track));
         }
 
         function getTodayPlaylist() {
@@ -1248,7 +1250,7 @@
             playlistHeader.style.background = "linear-gradient(180deg, #170000 0%, #121212 100%)";
             playlistTitle.innerHTML = "Block Track";
             playlistCover.style.background = "linear-gradient(135deg, #b0b0b0, #707070, #3a3a3a)";
-            playlistCover.innerHTML = '<i class="fas fa-ban"></i>'; //thumbs-down
+            playlistCover.innerHTML = '<i class="fas fa-ban"></i>';
             if (dislikePlaylist.length === 0) {
                 trackList.innerHTML = '<div style="padding: 40px; text-align: center; color: #b3b3b3;">No dislike tracks yet</div>';
                 return;
@@ -1257,6 +1259,8 @@
         }
         
         document.addEventListener('DOMContentLoaded', function() {
+            // for test generate algorithm playlist:
+            // localStorage.removeItem("nextTodayPlaylistDate");
             const favorite = JSON.parse(localStorage.getItem('favoritePlaylist')) || [];
             for (let i = 0; i < favorite.length; i++) {
                 for (let j = 0; j < audiojson.length; j++) {
@@ -1273,21 +1277,51 @@
                     }
                 }
             }
-            todayPlaylist = getTodayPlaylist();
-            let lastTodayPlaylistDate = localStorage.getItem('lastTodayPlaylistDate');
-            const daily = JSON.parse(localStorage.getItem('dailyPlaylist')) || [];
-            for (let i = 0; i < daily.length; i++) {
-                for (let j = 0; j < audiojson.length; j++) {
-                    if (daily[i]  == audiojson[j].filename) {
-                        todayPlaylist.push(audiojson[i]);
-                    }
-                }
+            let nextTodayPlaylistDate = localStorage.getItem('nextTodayPlaylistDate');
+            if (nextTodayPlaylistDate === null || new Date() >= new Date(nextTodayPlaylistDate)) {
+                nextTodayPlaylistDate = new Date();
+                nextTodayPlaylistDate.setDate(nextTodayPlaylistDate.getDate() + 1);
+                nextTodayPlaylistDate.setHours(4, 0, 0, 0);
+                todayPlaylist = getTodayPlaylist();
+                localStorage.setItem('nextTodayPlaylistDate', nextTodayPlaylistDate.toISOString());
+                localStorage.setItem('dailyPlaylist', JSON.stringify(todayPlaylist));
+            } else {
+                todayPlaylist = JSON.parse(localStorage.getItem('dailyPlaylist')) || [];
             }
-            const page = new URLSearchParams(window.location.search).get('page');
-            if (page == "favorite") { currentPage = "favorite"; currentPlaylist = favoritePlaylist; generateFavoritePlaylist(); menuHome.classList.remove('active'); menuFavorite.classList.add('active'); }
-            else if (page == "dislike") { currentPage = "dislike"; currentPlaylist = dislikePlaylist; generateDislikePlaylist(); menuHome.classList.remove('active'); menuBan.classList.add('active'); }
-            else { currentPage = "today"; currentPlaylist = todayPlaylist; generateTodayPlaylist(); }
-            updatePlayer(currentPlaylist[playlistId]);
+            currentPage = new URLSearchParams(window.location.search).get('page');
+            if (currentPage == "favorite") {
+                currentPlaylist = favoritePlaylist;
+                generateFavoritePlaylist();
+                menuHome.classList.remove('active');
+                menuFavorite.classList.add('active');
+            }
+            else if (currentPage == "dislike") {
+                currentPlaylist = dislikePlaylist;
+                generateDislikePlaylist();
+                menuHome.classList.remove('active');
+                menuBan.classList.add('active');
+            }
+            else {
+                currentPage = "today";
+                currentPlaylist = todayPlaylist;
+                generateTodayPlaylist();
+            }
+            const savedVolume = localStorage.getItem('playerVolume');
+            if (savedVolume !== null) {
+                const volume = parseFloat(savedVolume);
+                audioPlayer.volume = volume;
+                volumeLevel.style.width = `${volume * 100}%`;
+                const volumeIcon = document.querySelector('.volume-icon');
+                if (volume === 0) { volumeIcon.className = 'fas fa-volume-mute volume-icon'; }
+                else { volumeIcon.className = 'fas fa-volume-up volume-icon'; }
+            }
+            let findTrack = localStorage.getItem("track");
+            if (findTrack === null) {
+                updatePlayer(currentPlaylist[playlistId]);
+            } else {
+                playlistId = -1;
+                updatePlayer(JSON.parse(findTrack));
+            }
         });
     </script>
 </body>
