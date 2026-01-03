@@ -34,6 +34,7 @@
             font-size: 24px;
             color: #1db954;
             margin-bottom: 40px;
+            cursor: pointer;
         }
         
         .nav-item {
@@ -282,10 +283,6 @@
         
         .track-like:hover {
             color: #1db954;
-        }
-
-        .playing {
-            background-color: rgba(29, 185, 84, 0.1);
         }
 
         .track-dislike {
@@ -540,14 +537,15 @@
             .player-track {
                 gap: 12px;
                 width: 200px;
+                margin-left: -5px;
             }
 
             .player-title {
-                width: 68px;
+                width: 70px;
             }
 
             .player-artist {
-                width: 68px;
+                width: 70px;
             }
 
             .playlist-container {
@@ -601,9 +599,9 @@
 </head>
 <body>
     <div class="sidebar">
-        <a class="logo" href="">
+        <div class="logo" onclick="document.getElementById('menuHome').click();">
             <i class="fas fa-music"></i>
-        </a>
+        </div>
         <div class="nav-item active" id="menuHome">
             <div class="nav-icon">
                 <i class="fas fa-home"></i>
@@ -738,6 +736,7 @@
         let dislikePlaylist = [];
         let todayPlaylist = [];
         let currentPlaylist = [];
+        let currentPage = "today";
         let avatarNotFound = []; // optimization call
         
         function formatTime(seconds){
@@ -775,7 +774,7 @@
             menuBan.classList.remove('active');
             menuSearch.classList.remove('active');
             generateTodayPlaylist();
-            currentPlaylist = todayPlaylist;
+            currentPage = "today";
         });
 
         menuFavorite.addEventListener('click', function() {
@@ -784,7 +783,7 @@
             menuBan.classList.remove('active');
             menuSearch.classList.remove('active');
             generateFavoritePlaylist();
-            currentPlaylist = favoritePlaylist;
+            currentPage = "favorite";
         });
 
         menuSearch.addEventListener('click', function() {
@@ -800,7 +799,7 @@
             menuFavorite.classList.remove('active');
             menuSearch.classList.remove('active');
             generateDislikePlaylist();
-            currentPlaylist = dislikePlaylist;
+            currentPage = "dislike";
         });
 
         volumeBar.addEventListener('click', function(e) {
@@ -813,7 +812,12 @@
         });
 
         mainPlayBtn.addEventListener('click', function() {
-            if (audioPlayer.paused) { audioPlayer.play(); }
+            if (audioPlayer.paused) {
+                if (currentPage == "today") { currentPlaylist = todayPlaylist; }
+                if (currentPage == "dislike") { currentPlaylist = dislikePlaylist; }
+                if (currentPage == "favorite") { currentPlaylist = favoritePlaylist; }
+                if (currentPlaylist.length > 0) { updatePlayer(currentPlaylist[0]); }
+                audioPlayer.play(); }
             else { audioPlayer.pause(); }
         });
 
@@ -836,24 +840,87 @@
 
         playerLike.addEventListener('click', function() {
             const currentTrack = currentPlaylist[playlistId];
-            if (currentTrack) { toggleFavorite(currentTrack.filename); }
+            if (currentTrack) {
+                const isLiked = toggleFavorite(currentTrack.filename);
+                if (isLiked) {
+                    playerLike.classList.add('like-active');
+                    playerLike.innerHTML = '<i class="fas fa-heart"></i>';
+                    if (playerDislike.classList.contains('dislike-active')) {
+                        playerDislike.classList.remove('dislike-active');
+                        playerDislike.innerHTML = '<i class="far fa-thumbs-down"></i>';
+                    }
+                } else {
+                    playerLike.classList.remove('like-active');
+                    playerLike.innerHTML = '<i class="far fa-heart"></i>';
+                }
+                const trackRow = document.querySelector(`[data-filename="${currentTrack.filename}"]`);
+                if (trackRow) {
+                    const likeBtn = trackRow.querySelector('.track-like');
+                    const dislikeBtn = trackRow.querySelector('.track-dislike');
+                    if (likeBtn) {
+                        if (isLiked) {
+                            likeBtn.classList.add('like-active');
+                            likeBtn.innerHTML = '<i class="fas fa-heart"></i>';
+                            if (dislikeBtn && dislikeBtn.classList.contains('dislike-active')) {
+                                dislikeBtn.classList.remove('dislike-active');
+                                dislikeBtn.innerHTML = '<i class="far fa-thumbs-down"></i>';
+                            }
+                            trackRow.style.opacity = '1';
+                        } else {
+                            likeBtn.classList.remove('like-active');
+                            likeBtn.innerHTML = '<i class="far fa-heart"></i>';
+                        }
+                    }
+                }
+            }
         });
 
         playerDislike.addEventListener('click', function() {
             const currentTrack = currentPlaylist[playlistId];
-            if (currentTrack) { toggleDislike(currentTrack.filename); }
+            if (currentTrack) {
+                const isDisliked = toggleDislike(currentTrack.filename);
+                if (isDisliked) {
+                    playerDislike.classList.add('dislike-active');
+                    playerDislike.innerHTML = '<i class="fas fa-thumbs-down"></i>';
+                    if (playerLike.classList.contains('like-active')) {
+                        playerLike.classList.remove('like-active');
+                        playerLike.innerHTML = '<i class="far fa-heart"></i>';
+                    }
+                } else {
+                    playerDislike.classList.remove('dislike-active');
+                    playerDislike.innerHTML = '<i class="far fa-thumbs-down"></i>';
+                }
+                const trackRow = document.querySelector(`[data-filename="${currentTrack.filename}"]`);
+                if (trackRow) {
+                    const likeBtn = trackRow.querySelector('.track-like');
+                    const dislikeBtn = trackRow.querySelector('.track-dislike');
+                    if (dislikeBtn) {
+                        if (isDisliked) {
+                            dislikeBtn.classList.add('dislike-active');
+                            dislikeBtn.innerHTML = '<i class="fas fa-thumbs-down"></i>';
+                            if (likeBtn && likeBtn.classList.contains('like-active')) {
+                                likeBtn.classList.remove('like-active');
+                                likeBtn.innerHTML = '<i class="far fa-heart"></i>';
+                            }
+                            trackRow.style.opacity = '0.7';
+                        } else {
+                            dislikeBtn.classList.remove('dislike-active');
+                            dislikeBtn.innerHTML = '<i class="far fa-thumbs-down"></i>';
+                            trackRow.style.opacity = '1';
+                        }
+                    }
+                }
+            }
         });
 
         audioPlayer.addEventListener('play', function() {
             playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
             mainPlayBtn.innerHTML = '<i class="fas fa-pause"></i>';
-            document.getElementById('currentTrack')?.classList.add('playing');
         });
         
         audioPlayer.addEventListener('pause', function() {
             playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
             mainPlayBtn.innerHTML = '<i class="fas fa-play"></i>';
-            document.getElementById('currentTrack')?.classList.remove('playing');
         });
 
         audioPlayer.addEventListener('timeupdate', function() {
@@ -906,9 +973,16 @@
                 if (track) {
                     dislikePlaylist.unshift(track);
                     dislikeFilenames.unshift(filename);
+                    const todayIndex = todayPlaylist.findIndex(track => track.filename === filename);
+                    if (todayIndex !== -1) {
+                        todayPlaylist.splice(todayIndex, 1);
+                    }
                     if (favoriteIndex !== -1) {
                         favoritePlaylist.splice(favoriteIndex, 1);
                         favoriteFilenames.splice(favoriteIndex, 1);
+                    }
+                    if (currentPlaylist[playlistId] && currentPlaylist[playlistId].filename === filename) {
+                        setTimeout(() => { nextTrackBtn.click(); }, 300);
                     }
                 }
             } else {
@@ -924,6 +998,19 @@
             audioPlayer.src = `audio/${track.filename}`;
             playerTitle.textContent = track.title;
             playerArtist.textContent = track.artist;
+            const isLiked = favoritePlaylist.some(t => t.filename === track.filename);
+            const isDisliked = dislikePlaylist.some(t => t.filename === track.filename);
+            if (isDisliked) {
+                playerLike.classList.remove('like-active');
+                playerLike.innerHTML = '<i class="far fa-heart"></i>';
+                playerDislike.classList.add('dislike-active');
+                playerDislike.innerHTML = '<i class="fas fa-thumbs-down"></i>';
+            } else {
+                playerLike.classList.add('like-active');
+                playerLike.innerHTML = '<i class="fas fa-heart"></i>';
+                playerDislike.classList.remove('dislike-active');
+                playerDislike.innerHTML = '<i class="far fa-thumbs-down"></i>';
+            }
             const imagePath = `audio/${track.filename.replace('.mp3', '.jpg')}`;
             const testImage = new Image();
             testImage.onload = function() {
@@ -1049,15 +1136,18 @@
             allTrackRows.forEach(row => { 
                 row.addEventListener('click', function(e) {
                     if (e.target.closest('.track-play-icon') || e.target.classList.contains('track-play-icon')) {
-                        const oldPlaylistId = playlistId;
-                        const oldTrack = document.getElementById('currentTrack');
-                        if (oldTrack) oldTrack.classList.remove('playing');
-                        oldTrack?.removeAttribute('id');
-                        e.currentTarget.classList.add('playing');
                         e.currentTarget.id = 'currentTrack';
-                        playlistId = parseInt(e.currentTarget.dataset.playlistid);
-                        updatePlayer(currentPlaylist[playlistId]);
-                        audioPlayer.play();
+                        if (currentPlaylist[playlistId] && currentPlaylist[playlistId].filename === e.currentTarget.dataset.filename) {
+                            if (audioPlayer.paused) { audioPlayer.play(); }
+                            else { audioPlayer.pause(); }
+                        } else {
+                            playlistId = parseInt(e.currentTarget.dataset.playlistid);
+                            if (currentPage == "today") { currentPlaylist = todayPlaylist; }
+                            if (currentPage == "dislike") { currentPlaylist = dislikePlaylist; }
+                            if (currentPage == "favorite") { currentPlaylist = favoritePlaylist; }
+                            updatePlayer(currentPlaylist[playlistId]);
+                            audioPlayer.play();
+                        }
                     }
                 }); 
             });
