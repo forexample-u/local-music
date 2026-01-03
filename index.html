@@ -737,7 +737,8 @@
         let todayPlaylist = [];
         let currentPlaylist = [];
         let currentPage = "today";
-        let avatarNotFound = []; // optimization call
+        let avatarNotFound = [];
+        let isUpdateCurrentPlaylist = false;
         
         function formatTime(seconds){
             const secs = Math.floor(seconds % 60);
@@ -781,6 +782,7 @@
                 history.pushState({page: currentPage}, '', `?page=${currentPage}`);
             }
             document.querySelector('.playlist-container').scrollTo({ top: 0, behavior: 'smooth' });
+            isUpdateCurrentPlaylist = true;
         });
 
         menuFavorite.addEventListener('click', function() {
@@ -792,6 +794,7 @@
             currentPage = "favorite";
             history.pushState({page: currentPage}, '', `?page=${currentPage}`);
             document.querySelector('.playlist-container').scrollTo({ top: 0, behavior: 'smooth' });
+            isUpdateCurrentPlaylist = true;
         });
 
         menuSearch.addEventListener('click', function() {
@@ -799,6 +802,7 @@
             menuHome.classList.remove('active');
             menuFavorite.classList.remove('active');
             menuBan.classList.remove('active');
+            isUpdateCurrentPlaylist = true;
         });
 
         menuBan.addEventListener('click', function() {
@@ -810,6 +814,7 @@
             currentPage = "dislike";
             history.pushState({page: currentPage}, '', `?page=${currentPage}`);
             document.querySelector('.playlist-container').scrollTo({ top: 0, behavior: 'smooth' });
+            isUpdateCurrentPlaylist = true;
         });
 
         volumeBar.addEventListener('click', function(e) {
@@ -1013,8 +1018,27 @@
             return dislikeIndex === -1;
         }
 
+        function setCoverBackground(coverElement, track) {
+            if (track.filename.length % 2 == 0) {
+                const color1 = stringToColor(track.artist);
+                const color2 = stringToColor(track.title);
+                const color3 = stringToColor(track.artist + track.title);
+                coverElement.style.background = `radial-gradient(circle at 30% 20%, ${color1}40, transparent 40%),
+                    radial-gradient(circle at 70% 80%, ${color2}30, transparent 30%),
+                    linear-gradient(135deg, ${color1}20, ${color3}40, ${color2}20)`;
+                coverElement.style.backgroundSize = 'cover, cover, cover';
+                coverElement.style.backgroundBlendMode = 'screen';
+            } else {
+                coverElement.style.background = 'linear-gradient(135deg,' + stringToColor(track.filename) + ',' + stringToColor(track.filename + "1") + ')';
+                coverElement.style.backgroundSize = 'cover';
+                coverElement.style.backgroundPosition = 'center';
+            }
+        }
+
         function updatePlayer(track) {
-            audioPlayer.src = `audio/${track.filename}`;
+            if (!audioPlayer.src.endsWith(`audio/${track.filename}`)){
+                audioPlayer.src = `audio/${track.filename}`;
+            }
             playerTitle.textContent = track.title;
             playerArtist.textContent = track.artist;
             const isLiked = favoritePlaylist.some(t => t.filename === track.filename);
@@ -1037,29 +1061,21 @@
             }
             const imagePath = `audio/${track.filename.replace('.mp3', '.jpg')}`;
             const testImage = new Image();
-            testImage.onload = function() {
-                playerCover.style.background = `url('${imagePath}')`;
-                playerCover.style.backgroundSize = 'cover';
-                playerCover.style.backgroundPosition = 'center';
-                playerCover.style.backgroundBlendMode = 'overlay';
-            };
-            testImage.onerror = function() {
-                if (track.filename.length % 2 == 0) {
-                    const color1 = stringToColor(track.artist);
-                    const color2 = stringToColor(track.title);
-                    const color3 = stringToColor(track.artist + track.title);
-                    playerCover.style.background = `radial-gradient(circle at 30% 20%, ${color1}40, transparent 40%),
-                        radial-gradient(circle at 70% 80%, ${color2}30, transparent 30%),
-                        linear-gradient(135deg, ${color1}20, ${color3}40, ${color2}20)`;
-                    playerCover.style.backgroundSize = 'cover, cover, cover';
-                    playerCover.style.backgroundBlendMode = 'screen';
-                } else {
-                    playerCover.style.background = 'linear-gradient(135deg,' + stringToColor(track.filename) + ',' + stringToColor(track.filename + "1") + ')';
+            if (avatarNotFound.includes(track.filename)){
+                setCoverBackground(playerCover, track);
+            } else {
+                testImage.onload = function() {
+                    playerCover.style.background = `url('${imagePath}')`;
                     playerCover.style.backgroundSize = 'cover';
                     playerCover.style.backgroundPosition = 'center';
-                }
-            };
-            testImage.src = imagePath;
+                    playerCover.style.backgroundBlendMode = 'overlay';
+                };
+                testImage.onerror = function() {
+                    setCoverBackground(playerCover, track);
+                    avatarNotFound.push(track.filename);
+                };
+                testImage.src = imagePath;
+            }
             localStorage.setItem("track", JSON.stringify(track));
         }
 
@@ -1098,29 +1114,21 @@
                 cover.className = "track-cover";
                 const imagePath = `audio/${track.filename.replace('.mp3', '.jpg')}`;
                 const testImage = new Image();
-                testImage.onload = function() {
-                    cover.style.background = `url('${imagePath}')`;
-                    cover.style.backgroundSize = 'cover';
-                    cover.style.backgroundPosition = 'center';
-                    cover.style.backgroundBlendMode = 'overlay';
-                };
-                testImage.onerror = function() {
-                    if (track.filename.length % 2 == 0) {
-                        const color1 = stringToColor(track.artist);
-                        const color2 = stringToColor(track.title);
-                        const color3 = stringToColor(track.artist + track.title);
-                        cover.style.background = `radial-gradient(circle at 30% 20%, ${color1}40, transparent 40%),
-                            radial-gradient(circle at 70% 80%, ${color2}30, transparent 30%),
-                            linear-gradient(135deg, ${color1}20, ${color3}40, ${color2}20)`;
-                        cover.style.backgroundSize = 'cover, cover, cover';
-                        cover.style.backgroundBlendMode = 'screen';
-                    } else {
-                        cover.style = 'background: linear-gradient(135deg,' + stringToColor(track.filename) + ',' + stringToColor(track.filename + "1") + ')';
+                if (avatarNotFound.includes(track.filename)){
+                    setCoverBackground(cover, track);
+                } else {
+                    testImage.onload = function() {
+                        cover.style.background = `url('${imagePath}')`;
                         cover.style.backgroundSize = 'cover';
                         cover.style.backgroundPosition = 'center';
-                    }
-                };
-                testImage.src = imagePath;
+                        cover.style.backgroundBlendMode = 'overlay';
+                    };
+                    testImage.onerror = function() {
+                        setCoverBackground(cover, track);
+                        avatarNotFound.push(track.filename);
+                    };
+                    testImage.src = imagePath;
+                }
                 const trackDetails = document.createElement("div");
                 const trackTitle = document.createElement("div");
                 const trackArtist = document.createElement("div");
@@ -1162,14 +1170,15 @@
                 row.addEventListener('click', function(e) {
                     if (e.target.closest('.track-play-icon') || e.target.classList.contains('track-play-icon')) {
                         e.currentTarget.id = 'currentTrack';
+                        if (currentPage == "today" && isUpdateCurrentPlaylist) { currentPlaylist = Array.from(todayPlaylist); isUpdateCurrentPlaylist = false; }
+                        if (currentPage == "dislike" && isUpdateCurrentPlaylist) { currentPlaylist = Array.from(dislikePlaylist); isUpdateCurrentPlaylist = false; }
+                        if (currentPage == "favorite" && isUpdateCurrentPlaylist) { currentPlaylist = Array.from(favoritePlaylist); isUpdateCurrentPlaylist = false; }
                         if (currentPlaylist[playlistId] && currentPlaylist[playlistId].filename === e.currentTarget.dataset.filename) {
+                            updatePlayer(currentPlaylist[playlistId]);
                             if (audioPlayer.paused) { audioPlayer.play(); }
                             else { audioPlayer.pause(); }
                         } else {
                             playlistId = parseInt(e.currentTarget.dataset.playlistid);
-                            if (currentPage == "today") { currentPlaylist = Array.from(todayPlaylist); }
-                            if (currentPage == "dislike") { currentPlaylist = Array.from(dislikePlaylist); }
-                            if (currentPage == "favorite") { currentPlaylist = Array.from(favoritePlaylist); }
                             updatePlayer(currentPlaylist[playlistId]);
                             audioPlayer.play();
                         }
