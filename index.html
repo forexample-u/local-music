@@ -599,7 +599,7 @@
 </head>
 <body>
     <div class="sidebar">
-        <div class="logo" onclick="document.getElementById('menuHome').click();">
+        <div class="logo" onclick="document.getElementById('menuHome').click(); document.querySelector('.playlist-container').scrollTo(0, 0);">
             <i class="fas fa-music"></i>
         </div>
         <div class="nav-item active" id="menuHome">
@@ -780,6 +780,7 @@
             } catch {
                 history.pushState({page: currentPage}, '', `?page=${currentPage}`);
             }
+            document.querySelector('.playlist-container').scrollTo({ top: 0, behavior: 'smooth' });
         });
 
         menuFavorite.addEventListener('click', function() {
@@ -790,6 +791,7 @@
             generateFavoritePlaylist();
             currentPage = "favorite";
             history.pushState({page: currentPage}, '', `?page=${currentPage}`);
+            document.querySelector('.playlist-container').scrollTo({ top: 0, behavior: 'smooth' });
         });
 
         menuSearch.addEventListener('click', function() {
@@ -807,6 +809,7 @@
             generateDislikePlaylist();
             currentPage = "dislike";
             history.pushState({page: currentPage}, '', `?page=${currentPage}`);
+            document.querySelector('.playlist-container').scrollTo({ top: 0, behavior: 'smooth' });
         });
 
         volumeBar.addEventListener('click', function(e) {
@@ -820,12 +823,19 @@
 
         mainPlayBtn.addEventListener('click', function() {
             if (audioPlayer.paused) {
+                const lastPlaylistLength = currentPlaylist.length;
                 if (currentPage == "today") { currentPlaylist = todayPlaylist; }
                 if (currentPage == "dislike") { currentPlaylist = dislikePlaylist; }
                 if (currentPage == "favorite") { currentPlaylist = favoritePlaylist; }
-                if (currentPlaylist.length > 0) { updatePlayer(currentPlaylist[0]); }
-                audioPlayer.play(); }
-            else { audioPlayer.pause(); }
+                if (currentPlaylist.length > 0 && currentPlaylist.length != lastPlaylistLength) { // be carefull this work but if lastPlaylistLength other
+                    playlistId = 0;
+                    updatePlayer(currentPlaylist[playlistId]);
+                }
+                audioPlayer.play();
+            }
+            else { 
+                audioPlayer.pause();
+            }
         });
 
         playPauseBtn.addEventListener('click', function() {
@@ -1012,9 +1022,14 @@
                 playerLike.innerHTML = '<i class="far fa-heart"></i>';
                 playerDislike.classList.add('dislike-active');
                 playerDislike.innerHTML = '<i class="fas fa-thumbs-down"></i>';
-            } else {
+            } else if (isLiked) {
+                playerDislike.classList.remove('dislike-active');
+                playerDislike.innerHTML = '<i class="far fa-thumbs-down"></i>';
                 playerLike.classList.add('like-active');
                 playerLike.innerHTML = '<i class="fas fa-heart"></i>';
+            } else {
+                playerLike.classList.remove('like-active');
+                playerLike.innerHTML = '<i class="far fa-heart"></i>';
                 playerDislike.classList.remove('dislike-active');
                 playerDislike.innerHTML = '<i class="far fa-thumbs-down"></i>';
             }
@@ -1240,7 +1255,7 @@
             }
             generateHtmlByPlaylist(dislikePlaylist);
         }
-
+        
         document.addEventListener('DOMContentLoaded', function() {
             const favorite = JSON.parse(localStorage.getItem('favoritePlaylist')) || [];
             for (let i = 0; i < favorite.length; i++) {
@@ -1269,9 +1284,9 @@
                 }
             }
             const page = new URLSearchParams(window.location.search).get('page');
-            if (page == "favorite") { currentPlaylist = favoritePlaylist; generateFavoritePlaylist(); menuHome.classList.remove('active'); menuFavorite.classList.add('active'); }
-            else if (page == "dislike") { currentPlaylist = dislikePlaylist; generateDislikePlaylist(); menuHome.classList.remove('active'); menuBan.classList.add('active'); }
-            else { currentPlaylist = todayPlaylist; generateTodayPlaylist(); }
+            if (page == "favorite") { currentPage = "favorite"; currentPlaylist = favoritePlaylist; generateFavoritePlaylist(); menuHome.classList.remove('active'); menuFavorite.classList.add('active'); }
+            else if (page == "dislike") { currentPage = "dislike"; currentPlaylist = dislikePlaylist; generateDislikePlaylist(); menuHome.classList.remove('active'); menuBan.classList.add('active'); }
+            else { currentPage = "today"; currentPlaylist = todayPlaylist; generateTodayPlaylist(); }
             updatePlayer(currentPlaylist[playlistId]);
         });
     </script>
