@@ -992,15 +992,16 @@
                     dislikePlaylist.unshift(track);
                     dislikeFilenames.unshift(filename);
                     const todayIndex = todayPlaylist.findIndex(track => track.filename === filename);
+                    if (currentPlaylist[playlistId] && currentPlaylist[playlistId].filename === filename) {
+                        nextTrackBtn.click();
+                    }
                     if (todayIndex !== -1) {
                         todayPlaylist.splice(todayIndex, 1);
+                        localStorage.setItem('dailyPlaylist', JSON.stringify(todayPlaylist.map(track => track.filename)));
                     }
                     if (favoriteIndex !== -1) {
                         favoritePlaylist.splice(favoriteIndex, 1);
                         favoriteFilenames.splice(favoriteIndex, 1);
-                    }
-                    if (currentPlaylist[playlistId] && currentPlaylist[playlistId].filename === filename) {
-                        setTimeout(() => { nextTrackBtn.click(); }, 300);
                     }
                 }
             } else {
@@ -1284,9 +1285,16 @@
                 nextTodayPlaylistDate.setHours(4, 0, 0, 0);
                 todayPlaylist = getTodayPlaylist();
                 localStorage.setItem('nextTodayPlaylistDate', nextTodayPlaylistDate.toISOString());
-                localStorage.setItem('dailyPlaylist', JSON.stringify(todayPlaylist));
+                localStorage.setItem('dailyPlaylist', JSON.stringify(todayPlaylist.map(track => track.filename)));
             } else {
-                todayPlaylist = JSON.parse(localStorage.getItem('dailyPlaylist')) || [];
+                const daily = JSON.parse(localStorage.getItem('dailyPlaylist')) || [];
+                for (let i = 0; i < daily.length; i++) {
+                    for (let j = 0; j < audiojson.length; j++) {
+                        if (daily[i] == audiojson[j].filename) {
+                            todayPlaylist.push(audiojson[j]);
+                        }
+                    }
+                }
             }
             currentPage = new URLSearchParams(window.location.search).get('page');
             if (currentPage == "favorite") {
@@ -1316,12 +1324,7 @@
                 else { volumeIcon.className = 'fas fa-volume-up volume-icon'; }
             }
             let findTrack = localStorage.getItem("track");
-            if (findTrack === null) {
-                updatePlayer(currentPlaylist[playlistId]);
-            } else {
-                playlistId = -1;
-                updatePlayer(JSON.parse(findTrack));
-            }
+            updatePlayer(currentPlaylist[playlistId]);
         });
     </script>
 </body>
