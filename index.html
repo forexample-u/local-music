@@ -730,6 +730,7 @@
         const playlistCover = document.getElementById('playlistCover');
         const playerLike = document.getElementById('playerLike');
         const playerDislike = document.getElementById('playerDislike');
+        const jpgImageFolder = "audio";
 
         let playlistId = 0;
         let favoritePlaylist = [];
@@ -844,9 +845,18 @@
             }
         });
 
-        playPauseBtn.addEventListener('click', function() {
+        playPauseBtn.addEventListener('click', function(e) {
+            e.preventDefault();
             if (audioPlayer.paused) { audioPlayer.play(); }
             else { audioPlayer.pause(); }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !e.target.isContentEditable) {
+                e.preventDefault();
+                if (audioPlayer.paused) { audioPlayer.play(); }
+                else { audioPlayer.pause(); }
+            }
         });
 
         nextTrackBtn.addEventListener('click', function() {
@@ -902,14 +912,7 @@
             const currentTrack = currentPlaylist[playlistId];
             if (currentTrack) {
                 const isDisliked = toggleDislike(currentTrack.filename);
-                if (isDisliked) {
-                    playerDislike.classList.add('dislike-active');
-                    playerDislike.innerHTML = '<i class="fas fa-thumbs-down"></i>';
-                    if (playerLike.classList.contains('like-active')) {
-                        playerLike.classList.remove('like-active');
-                        playerLike.innerHTML = '<i class="far fa-heart"></i>';
-                    }
-                } else {
+                if (!isDisliked) {
                     playerDislike.classList.remove('dislike-active');
                     playerDislike.innerHTML = '<i class="far fa-thumbs-down"></i>';
                 }
@@ -1036,7 +1039,7 @@
         }
 
         function updatePlayer(track) {
-            if (!audioPlayer.src.endsWith(`audio/${track.filename}`)){
+            if (!audioPlayer.src.endsWith(`${track.filename}`)) {
                 audioPlayer.src = `audio/${track.filename}`;
             }
             playerTitle.textContent = track.title;
@@ -1059,7 +1062,7 @@
                 playerDislike.classList.remove('dislike-active');
                 playerDislike.innerHTML = '<i class="far fa-thumbs-down"></i>';
             }
-            const imagePath = `audio/${track.filename.replace('.mp3', '.jpg')}`;
+            const imagePath = jpgImageFolder + `/${track.filename.split('.').slice(0, -1).join('.') + '.jpg'}`;
             const testImage = new Image();
             if (avatarNotFound.includes(track.filename)){
                 setCoverBackground(playerCover, track);
@@ -1112,7 +1115,7 @@
                 playIcon.className = "track-play-icon";
                 playIcon.innerHTML = '<i class="fas fa-play"></i>';
                 cover.className = "track-cover";
-                const imagePath = `audio/${track.filename.replace('.mp3', '.jpg')}`;
+                const imagePath = jpgImageFolder + `/${track.filename.split('.').slice(0, -1).join('.') + '.jpg'}`;
                 const testImage = new Image();
                 if (avatarNotFound.includes(track.filename)){
                     setCoverBackground(cover, track);
@@ -1193,9 +1196,13 @@
                     if (liked) {
                         this.classList.add('like-active');
                         this.innerHTML = '<i class="fas fa-heart"></i>';
+                        playerLike.classList.add('like-active');
+                        playerLike.innerHTML = '<i class="fas fa-heart"></i>';
                     } else {
                         this.classList.remove('like-active');
                         this.innerHTML = '<i class="far fa-heart"></i>';
+                        playerLike.classList.remove('like-active');
+                        playerLike.innerHTML = '<i class="far fa-heart"></i>';
                     }
                     const row = this.closest('.track-row');
                     const dislikeBtn = row.querySelector('.track-dislike');
