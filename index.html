@@ -552,12 +552,38 @@
             transition: transform 0.2s, background-color 0.2s;
             display: flex;
             align-items: center;
+            width: 100%;
             gap: 10px;
+            justify-content: center;
         }
 
         .download-btn:hover {
             transform: scale(1.05);
             background-color: #1ed760;
+        }
+
+        .github-btn {
+            background-color: #333;
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            width: 100%;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+        .github-btn:hover {
+            transform: scale(1.05);
+            background-color: #444;
         }
         
         ::-webkit-scrollbar {
@@ -813,6 +839,9 @@
             </div>
             <button class="download-btn" id="downloadBtn">
                 Download (go to local music on PC)
+            </button>
+            <button class="github-btn" id="githubBtn" onclick="window.open('https://github.com/forexample-u/local-music', '_blank')">
+                <i class="fab fa-github"></i> GitHub
             </button>
         </div>
     </div>
@@ -1557,4 +1586,3 @@
     </script>
 </body>
 </html>
-
