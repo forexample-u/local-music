@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -276,8 +276,8 @@
         .track-duration {
             color: #b3b3b3;
             font-size: 14px;
-            width: 45px;
             text-align: right;
+            margin-right: 10px;
         }
         
         .track-like {
@@ -300,7 +300,6 @@
             cursor: pointer;
             width: 30px;
             text-align: center;
-            margin-right: 10px;
         }
 
         .track-dislike:hover {
@@ -601,6 +600,17 @@
 
             .player-extra {
                 display: none;
+            }
+        }
+
+        @media (max-width: 385px) {
+            .control-buttons {
+                gap: 15.5px;
+            }
+
+            .player-track {
+                gap: 12px;
+                margin-left: -9px;
             }
         }
     </style>
@@ -1092,7 +1102,7 @@
 
         function getTodayPlaylist() {
             const playlist = [];
-            for (let j = 0; j < 50; j++) {
+            for (let j = 0; j < 55; j++) {
                 let track = null;
                 track = audiojson[Math.floor(Math.random() * audiojson.length)];
                 if (!dislikePlaylist.includes(track) && !playlist.includes(track)) {
@@ -1166,9 +1176,9 @@
                 dislikeButton.className = `track-dislike ${isDisliked ? 'dislike-active' : ''}`;
                 dislikeButton.dataset.filename = track.filename;
                 dislikeButton.innerHTML = `<i class="${isDisliked ? 'fas' : 'far'} fa-thumbs-down"></i>`;
-                trackTime.appendChild(trackDuration);
                 trackTime.appendChild(likeButton);
                 trackTime.appendChild(dislikeButton);
+                trackTime.appendChild(trackDuration);
                 trackElement.appendChild(trackInfo);
                 trackElement.appendChild(trackTime);
                 trackList.appendChild(trackElement);
