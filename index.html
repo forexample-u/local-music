@@ -485,6 +485,80 @@
         #audioPlayer {
             display: none;
         }
+
+        #settingsBtn {
+            position: absolute;
+            bottom: 10px;
+            width: 78px;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #282828;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            padding: 30px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #b3b3b3;
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .settings-label {
+            display: block;
+            font-size: 16px;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .download-btn {
+            background-color: #1db954;
+            color: #000;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .download-btn:hover {
+            transform: scale(1.05);
+            background-color: #1ed760;
+        }
         
         ::-webkit-scrollbar {
             width: 10px;
@@ -601,6 +675,10 @@
             .player-extra {
                 display: none;
             }
+
+            #settingsBtn {
+                display: none;
+            }
         }
 
         @media (max-width: 385px) {
@@ -625,7 +703,7 @@
                 <i class="fas fa-home"></i>
             </div>
         </div>
-        <div class="nav-item" id="menuSearch">
+        <div class="nav-item" style="display: none;" id="menuSearch">
             <div class="nav-icon">
                 <i class="fas fa-search"></i>
             </div>
@@ -638,6 +716,11 @@
         <div class="nav-item" id="menuFavorite">
             <div class="nav-icon">
                 <i class="fas fa-heart"></i>
+            </div>
+        </div>
+        <div class="nav-item" id="settingsBtn">
+            <div class="nav-icon">
+                <i class="fas fa-cog"></i>
             </div>
         </div>
     </div>
@@ -721,7 +804,21 @@
             </div>
         </div>
     </div>
+    
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" id="closeModalBtn">&times;</button>
+            </div>
+            <button class="download-btn" id="downloadBtn">
+                Download (go to local music on PC)
+            </button>
+        </div>
+    </div>
+    
     <script src="audio/audio.js"></script>
+    <script src="js/jszip.min.js"></script>
     <script>
         const audioPlayer = document.getElementById('audioPlayer');
         const playPauseBtn = document.getElementById("playPauseBtn");
@@ -748,8 +845,12 @@
         const playlistCover = document.getElementById('playlistCover');
         const playerLike = document.getElementById('playerLike');
         const playerDislike = document.getElementById('playerDislike');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
         const jpgImageFolder = "audio";
-
         let playlistId = 0;
         let favoritePlaylist = [];
         let dislikePlaylist = [];
@@ -772,6 +873,77 @@
             const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
             return "#" + "00000".substring(0, 6 - c.length) + c;
         }
+
+        settingsBtn.addEventListener('click', function() {
+            settingsModal.style.display = 'flex';
+        });
+
+        closeModalBtn.addEventListener('click', function() {
+            settingsModal.style.display = 'none';
+        });
+
+        downloadBtn.addEventListener('click', async function() {
+            downloadBtn.innerHTML = "Start download...";
+            const fileurl = jpgImageFolder.replace('.', '').replace("/", '') + "/";
+            const zip = new JSZip();
+            const jsFolder = zip.folder("js");
+            const cssFolder = zip.folder("css");
+            const audioFolder = zip.folder("audio");
+            const imagesFolders = zip.folder("images");
+            const webfontsFolders = zip.folder("webfonts");
+            for (let i = 0; i < audiojson.length; i++) {
+                try {
+                    const audioResponse = await fetch(fileurl + audiojson[i].filename);
+                    if (audioResponse.ok) {
+                        audioFolder.file(audiojson[i].filename, await audioResponse.blob());
+                    }
+                    downloadBtn.innerHTML = "File download: " + i + " / " + audiojson.length;
+                } catch (error) {
+                    console.warn(`Error fetch ${fileurl + audiojson[i].filename}:`, error);
+                }
+                try {
+                    const filejpg = audiojson[i].filename.split('.').slice(0, -1).join('.') + ".jpg";
+                    const jpgResponse = await fetch(fileurl + filejpg);
+                    if (jpgResponse.ok) {
+                        audioFolder.file(audiojson[i].filename, await jpgResponse.blob());
+                    }
+                } catch {}
+            }
+            const filesToDownload = [
+                { url: 'index.html', folder: null, name: 'index.html' },
+                { url: 'add.html', folder: null, name: 'add.html' },
+                { url: 'audio/audio.js', folder: audioFolder, name: 'audio.js' },
+                { url: 'js/jszip.min.js', folder: jsFolder, name: 'jszip.min.js' },
+                { url: 'js/jsmediatags.min.js', folder: jsFolder, name: 'jsmediatags.min.js' },
+                { url: 'css/fontawesome.min.css', folder: cssFolder, name: 'fontawesome.min.css' },
+                { url: 'images/zilla.png', folder: imagesFolders, name: 'zilla.png' },
+                { url: 'webfonts/fa-brands-400.woff2', folder: webfontsFolders, name: 'fa-brands-400.woff2' },
+                { url: 'webfonts/fa-regular-400.woff2', folder: webfontsFolders, name: 'fa-regular-400.woff2' },
+                { url: 'webfonts/fa-solid-900.woff2', folder: webfontsFolders, name: 'fa-solid-900.woff2' },
+                { url: 'webfonts/fa-v4compatibility.woff2', folder: webfontsFolders, name: 'fa-v4compatibility.woff2' }
+            ];
+            downloadBtn.innerHTML = "File audio.zip download!";
+            for (const file of filesToDownload) {
+                try {
+                    const response = await fetch(file.url);
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        if (file.folder) { file.folder.file(file.name, blob); }
+                        else { zip.file(file.name, blob); }
+                    }
+                } catch (error) {
+                    console.warn(`Error fetch ${file.url}:`, error);
+                }
+            }
+            const zipBlob = await zip.generateAsync({type: "blob"});
+            const downloadLink = document.createElement('a');
+            downloadLink.href = URL.createObjectURL(zipBlob);
+            downloadLink.download = 'audio_files.zip';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            URL.revokeObjectURL(downloadLink.href);
+        });
 
         progressBar.addEventListener('click', function(e) {
             const clickPosition = e.offsetX;
@@ -1326,8 +1498,10 @@
                 nextTodayPlaylistDate.setDate(nextTodayPlaylistDate.getDate() + 1);
                 nextTodayPlaylistDate.setHours(4, 0, 0, 0);
                 todayPlaylist = getTodayPlaylist();
-                localStorage.setItem('nextTodayPlaylistDate', nextTodayPlaylistDate.toISOString());
-                localStorage.setItem('dailyPlaylist', JSON.stringify(todayPlaylist.map(track => track.filename)));
+                if (todayPlaylist.length > 0) {
+                    localStorage.setItem('nextTodayPlaylistDate', nextTodayPlaylistDate.toISOString());
+                    localStorage.setItem('dailyPlaylist', JSON.stringify(todayPlaylist.map(track => track.filename)));
+                }
             } else {
                 const daily = JSON.parse(localStorage.getItem('dailyPlaylist')) || [];
                 for (let i = 0; i < daily.length; i++) {
@@ -1338,6 +1512,16 @@
                     }
                 }
                 if (daily.length == 0) { localStorage.removeItem("nextTodayPlaylistDate"); }
+            }
+            if (todayPlaylist.length == 0) {
+                nextTodayPlaylistDate = new Date();
+                nextTodayPlaylistDate.setDate(nextTodayPlaylistDate.getDate() + 1);
+                nextTodayPlaylistDate.setHours(4, 0, 0, 0);
+                todayPlaylist = getTodayPlaylist();
+                if (todayPlaylist.length > 0) {
+                    localStorage.setItem('nextTodayPlaylistDate', nextTodayPlaylistDate.toISOString());
+                    localStorage.setItem('dailyPlaylist', JSON.stringify(todayPlaylist.map(track => track.filename)));
+                }
             }
             currentPage = new URLSearchParams(window.location.search).get('page');
             if (currentPage == "favorite") {
@@ -1366,8 +1550,9 @@
                 if (volume === 0) { volumeIcon.className = 'fas fa-volume-mute volume-icon'; }
                 else { volumeIcon.className = 'fas fa-volume-up volume-icon'; }
             }
-            let findTrack = localStorage.getItem("track");
-            updatePlayer(currentPlaylist[playlistId]);
+            if (currentPlaylist[playlistId]) {
+                updatePlayer(currentPlaylist[playlistId]);
+            }
         });
     </script>
 </body>
