@@ -902,10 +902,10 @@
                     console.warn(`Error fetch ${fileurl + audiojson[i].filename}:`, error);
                 }
                 try {
-                    const filejpg = audiojson[i].filename.split('.').slice(0, -1).join('.') + ".jpg";
-                    const jpgResponse = await fetch(fileurl + filejpg);
+                    const filenamejpg = audiojson[i].filename.split('.').slice(0, -1).join('.') + ".jpg";
+                    const jpgResponse = await fetch(fileurl + filenamejpg);
                     if (jpgResponse.ok) {
-                        audioFolder.file(audiojson[i].filename, await jpgResponse.blob());
+                        audioFolder.file(filenamejpg, await jpgResponse.blob());
                     }
                 } catch {}
             }
@@ -1557,3 +1557,4 @@
     </script>
 </body>
 </html>
+
