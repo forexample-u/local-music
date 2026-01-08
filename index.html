@@ -1185,8 +1185,8 @@
         });
 
         function toggleFavorite(filename) {
-            const favoriteFilenames = favoritePlaylist.map(track => track.filename);
-            const dislikeFilenames = dislikePlaylist.map(track => track.filename);
+            const favoriteFilenames = JSON.parse(localStorage.getItem('favoritePlaylist') || '[]');
+            const dislikeFilenames = JSON.parse(localStorage.getItem('dislikePlaylist') || '[]');
             const favoriteIndex = favoriteFilenames.indexOf(filename);
             const dislikeIndex = dislikeFilenames.indexOf(filename);
             if (favoriteIndex === -1) {
@@ -1209,8 +1209,8 @@
         }
 
         function toggleDislike(filename) {
-            const favoriteFilenames = favoritePlaylist.map(track => track.filename);
-            const dislikeFilenames = dislikePlaylist.map(track => track.filename);
+            const favoriteFilenames = JSON.parse(localStorage.getItem('favoritePlaylist') || '[]');
+            const dislikeFilenames = JSON.parse(localStorage.getItem('dislikePlaylist') || '[]');
             const favoriteIndex = favoriteFilenames.indexOf(filename);
             const dislikeIndex = dislikeFilenames.indexOf(filename);
             if (dislikeIndex === -1) {
@@ -1586,3 +1586,4 @@
     </script>
 </body>
 </html>
+
