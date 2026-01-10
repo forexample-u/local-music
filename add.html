@@ -63,10 +63,155 @@
 <input type="file" id="audioFile" accept="audio/*" multiple />
 <label id="audioText">.</label>
 
+<canvas id="coverCanvas" style="display: none;" width="500" height="500"></canvas>
+
 <script src="./js/jsmediatags.min.js"></script>
 <script src="./js/jszip.min.js"></script>
 <script>
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+function stringToColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+    return "#" + "00000".substring(0, 6 - c.length) + c;
+}
+
+function generateGradient(color, ctx, width, height) {
+    const baseColor = color.substring(1);
+    const r = parseInt(baseColor.substring(0, 2), 16);
+    const g = parseInt(baseColor.substring(2, 4), 16);
+    const b = parseInt(baseColor.substring(4, 6), 16);
+    const radians = 45 * Math.PI / 180;
+    const gradient = ctx.createLinearGradient(0, 0, width * Math.cos(radians), height * Math.sin(radians));
+    gradient.addColorStop(0, `rgb(${Math.min(255, r + 50)}, ${Math.min(255, g + 50)}, ${Math.min(255, b + 50)})`);
+    gradient.addColorStop(0.5, color);
+    gradient.addColorStop(1, `rgb(${Math.max(0, r - 40)}, ${Math.max(0, g - 40)}, ${Math.max(0, b - 40)})`);
+    return gradient;
+}
+
+function generateCover(title, artist, genre, filename) {
+    const canvas = document.getElementById('coverCanvas');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = generateGradient(stringToColor(title + artist), ctx, width, height);
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    let valueseed = artist.length + title.length;
+    for (let i = 0; i < 10; i++) {
+        valueseed = (valueseed * 9301 + 49297) % 233280;
+        const rseed = valueseed / 233280;
+        valueseed = (valueseed * 9301 + 49297) % 233280;
+        const gseed = valueseed / 233280;
+        valueseed = (valueseed * 9301 + 49297) % 233280;
+        const bseed = valueseed / 233280;
+        ctx.beginPath();
+        ctx.arc(rseed * width, gseed * height, bseed * 50 + 20, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    const maxTextWidth = width * 0.9;
+    let titleFontSize = 70;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `bold ${titleFontSize}px 'Arial Black', Arial, sans-serif`;
+    ctx.fillStyle = '#FFFFFF';
+    let titleWidth = ctx.measureText(title).width;
+    while (titleWidth > maxTextWidth && titleFontSize > 40) {
+        titleFontSize -= 4;
+        ctx.font = `bold ${titleFontSize}px 'Arial Black', Arial, sans-serif`;
+        titleWidth = ctx.measureText(title).width;
+    }
+    const words = title.split(' ');
+    let lines = [];
+    let currentLine = '';
+    for (let i = 0; i < words.length; i++) {
+        const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
+        const testWidth = ctx.measureText(testLine).width;
+        if (testWidth > maxTextWidth && currentLine !== '') {
+            lines.push(currentLine);
+            currentLine = words[i];
+        } else {
+            currentLine = testLine;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+    while (lines.length > 3 && titleFontSize > 40) {
+        titleFontSize -= 4;
+        ctx.font = `bold ${titleFontSize}px 'Arial Black', Arial, sans-serif`;
+        lines = [];
+        currentLine = '';
+        for (let i = 0; i < words.length; i++) {
+            const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
+            const testWidth = ctx.measureText(testLine).width;
+            if (testWidth > maxTextWidth && currentLine !== '') {
+                lines.push(currentLine);
+                currentLine = words[i];
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (currentLine) lines.push(currentLine);
+    }
+    const titleLineHeight = titleFontSize * 1.1;
+    let titleStartY = lines.length === 1 ? height / 2 - 20 : height / 2 - ((lines.length - 1) * titleLineHeight) / 2;
+    lines.forEach((line, index) => {
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+        ctx.fillText(line, width / 2, titleStartY + index * titleLineHeight);
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+    });
+    const artistFontSize = Math.max(32, titleFontSize * 0.45);
+    ctx.font = `600 ${artistFontSize}px Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+    const artistY = titleStartY + lines.length * titleLineHeight + 30;
+    ctx.fillText(artist, width / 2, artistY);
+    const genreFontSize = 24;
+    ctx.font = `bold ${genreFontSize}px Arial, sans-serif`;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
+    let displayGenre = genre.toUpperCase();
+    if (displayGenre.length > 15) {
+        displayGenre = displayGenre.substring(0, 15) + '...';
+    }
+    ctx.fillText(displayGenre, width - 25, 25);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.font = `bold 20px Arial, sans-serif`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    const infoText = 'MUSIC';
+    ctx.fillText(infoText, 25, height - 25);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.beginPath();
+    ctx.arc(50, 50, 15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(width - 50, height - 50, 12, 0, Math.PI * 2);
+    ctx.fill();
+    return canvas.toDataURL('image/jpeg', 0.95);
+}
+
 function getAudioFeatures(audioData) {
     const buffer = audioData;
     const duration = audioData.duration;
@@ -122,7 +267,7 @@ function getAudioFeatures(audioData) {
 }
 
 async function getAudioMetadata(file) {
-    const metadata = { title: '', artist: '', genre: '', album: '', year: '', track: '', picture: null, pictureData: null, pictureFormat: null, filename: '' };
+    const metadata = { title: '', artist: '', genre: '', album: '', year: '', track: '', picture: null, pictureData: null, pictureFormat: null, filename: '', generatedCover: null };
     try {
         metadata.title = file.name.replace(/\.[^/.]+$/, "");
         const tags = await new Promise((resolve, reject) => { jsmediatags.read(file, { onSuccess: resolve, onError: reject }); }); // error
@@ -230,6 +375,12 @@ async function getByAudioData(file) {
         local = "ru";
     }
     duration = Math.round(duration * 100) / 100;
+    if (!metadata.pictureData) {
+        const coverBase64 = generateCover(title, artist, genre, file.name);
+        metadata.generatedCover = coverBase64;
+        metadata.pictureData = coverBase64.split(',')[1];
+        metadata.pictureFormat = 'image/jpeg';
+    }
     allMetadatas.push(metadata);
     let result = { genre: genre, title: title, artist: artist, filename: file.name, duration: duration, local: local };
     return result;
@@ -245,34 +396,44 @@ async function getZip(metadatas, audiojsblob) {
             if (metadata.pictureData) {
                 const filename = metadata.filename;
                 const nameWithoutExt = filename.substring(0, filename.lastIndexOf('.'));
-                const img = new Image();
-                img.src = `data:${metadata.pictureFormat || 'image/jpeg'};base64,${metadata.pictureData}`;
-                await new Promise((resolve, reject) => {
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const imgWidth = img.width;
-                        const imgHeight = img.height;
-                        canvas.width = 500;
-                        canvas.height = 500;
-                        const ctx = canvas.getContext('2d');
-                        ctx.fillStyle = '#FFFFFF';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        const scale = Math.min(500 / imgWidth, 500 / imgHeight);
-                        const newWidth = imgWidth * scale;
-                        const newHeight = imgHeight * scale;
-                        const offsetX = (500 - newWidth) / 2;
-                        const offsetY = (500 - newHeight) / 2;
-                        ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
-                        let jpgDataUrl = null;
-                        if (imgWidth >= 500 || imgHeight >= 500) { jpgDataUrl = canvas.toDataURL('image/jpeg', 0.8); }
-                        else { jpgDataUrl = canvas.toDataURL('image/jpeg', 1.0); }
-                        const base64Data = jpgDataUrl.split(',')[1];
-                        zipFolder.file(`${nameWithoutExt}.jpg`, base64Data, { base64: true });
-                        addedCount++;
-                        resolve();
-                    };
-                    img.onerror = reject;
-                });
+                if (metadata.generatedCover) {
+                    const base64Data = metadata.pictureData;
+                    zipFolder.file(`${nameWithoutExt}.jpg`, base64Data, { base64: true });
+                    addedCount++;
+                } else {
+                    const img = new Image();
+                    img.src = `data:${metadata.pictureFormat || 'image/jpeg'};base64,${metadata.pictureData}`;
+                    await new Promise((resolve, reject) => {
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const imgWidth = img.width;
+                            const imgHeight = img.height;
+                            canvas.width = 500;
+                            canvas.height = 500;
+                            const ctx = canvas.getContext('2d');
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            const scale = Math.min(500 / imgWidth, 500 / imgHeight);
+                            const newWidth = imgWidth * scale;
+                            const newHeight = imgHeight * scale;
+                            const offsetX = (500 - newWidth) / 2;
+                            const offsetY = (500 - newHeight) / 2;
+                            ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
+                            let jpgDataUrl = null;
+                            if (imgWidth >= 500 || imgHeight >= 500) { 
+                                jpgDataUrl = canvas.toDataURL('image/jpeg', 0.8); 
+                            }
+                            else { 
+                                jpgDataUrl = canvas.toDataURL('image/jpeg', 1.0); 
+                            }
+                            const base64Data = jpgDataUrl.split(',')[1];
+                            zipFolder.file(`${nameWithoutExt}.jpg`, base64Data, { base64: true });
+                            addedCount++;
+                            resolve();
+                        };
+                        img.onerror = reject;
+                    });
+                }
             }
         } catch (e) {
             console.warn("Error save binary:", e);
@@ -310,3 +471,4 @@ audioFile.addEventListener('change', async (event) => {
 });
 </script>
 </body>
+</html>
