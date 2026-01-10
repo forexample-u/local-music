@@ -1080,12 +1080,14 @@
 
         nextTrackBtn.addEventListener('click', function() {
             if (playlistId + 1 < currentPlaylist.length) { playlistId++; }
+            else { playlistId = 0; }
             updatePlayer(currentPlaylist[playlistId]);
             audioPlayer.play();
         });
 
         prevTrackBtn.addEventListener('click', function() {
             if (playlistId > 0) { playlistId--; }
+            else { playlistId = currentPlaylist.length - 1; }
             updatePlayer(currentPlaylist[playlistId]);
             audioPlayer.play();
         });
@@ -1586,4 +1588,3 @@
     </script>
 </body>
 </html>
-
