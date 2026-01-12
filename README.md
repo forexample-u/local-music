@@ -2,6 +2,8 @@
 
 Zilla - is a minimalist web player that works completely without subscriptions or hidden fees with offline!<br/>
 
+Go to zilla: https://reversedir.github.io/zila/index.html
+
 How do I go offline? <br/>
 1. Open Zilla in your browser
 2. Go to Settings -> Go to local
