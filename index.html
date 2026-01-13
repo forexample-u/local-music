@@ -870,13 +870,13 @@
         const jpgImageFolder = "audio";
         const sessionid = Math.floor(Math.random() * 1000000);
         let playlistId = 0;
+        let displayCurrentPlaylist = [];
         let favoritePlaylist = [];
         let dislikePlaylist = [];
         let todayPlaylist = [];
         let currentPlaylist = [];
         let currentPage = "today";
         let avatarNotFound = [];
-        let isUpdateCurrentPlaylist = false;
         let isDraggingProgress = false;
         let dragStartX = 0;
         let dragStartProgress = 0;
@@ -1048,7 +1048,7 @@
                 history.pushState({page: currentPage}, '', `?page=${currentPage}`);
             }
             document.querySelector('.playlist-container').scrollTo({ top: 0, behavior: 'smooth' });
-            isUpdateCurrentPlaylist = true;
+            displayCurrentPlaylist = Array.from(todayPlaylist);
         });
 
         menuFavorite.addEventListener('click', function() {
@@ -1059,7 +1059,7 @@
             currentPage = "favorite";
             history.pushState({page: currentPage}, '', `?page=${currentPage}`);
             document.querySelector('.playlist-container').scrollTo({ top: 0, behavior: 'smooth' });
-            isUpdateCurrentPlaylist = true;
+            displayCurrentPlaylist = Array.from(dislikePlaylist);
         });
 
         menuBan.addEventListener('click', function() {
@@ -1070,7 +1070,7 @@
             currentPage = "dislike";
             history.pushState({page: currentPage}, '', `?page=${currentPage}`);
             document.querySelector('.playlist-container').scrollTo({ top: 0, behavior: 'smooth' });
-            isUpdateCurrentPlaylist = true;
+            displayCurrentPlaylist = Array.from(dislikePlaylist);
         });
 
         volumeBar.addEventListener('click', function(e) {
@@ -1085,10 +1085,8 @@
 
         mainPlayBtn.addEventListener('click', function() {
             if (audioPlayer.paused) {
+                currentPlaylist = Array.from(displayCurrentPlaylist);
                 const lastPlaylistLength = currentPlaylist.length;
-                if (currentPage == "today") { currentPlaylist = Array.from(todayPlaylist); }
-                if (currentPage == "dislike") { currentPlaylist = Array.from(dislikePlaylist); }
-                if (currentPage == "favorite") { currentPlaylist = Array.from(favoritePlaylist); }
                 if (currentPlaylist.length > 0 && currentPlaylist.length != lastPlaylistLength) { // be carefull this work but if lastPlaylistLength other
                     playlistId = 0;
                     updatePlayer(currentPlaylist[playlistId]);
@@ -1442,9 +1440,7 @@
                 row.addEventListener('click', function(e) {
                     if (e.target.closest('.track-play-icon') || e.target.classList.contains('track-play-icon')) {
                         e.currentTarget.id = 'currentTrack';
-                        if (currentPage == "today" && isUpdateCurrentPlaylist) { currentPlaylist = Array.from(todayPlaylist); isUpdateCurrentPlaylist = false; }
-                        if (currentPage == "dislike" && isUpdateCurrentPlaylist) { currentPlaylist = Array.from(dislikePlaylist); isUpdateCurrentPlaylist = false; }
-                        if (currentPage == "favorite" && isUpdateCurrentPlaylist) { currentPlaylist = Array.from(favoritePlaylist); isUpdateCurrentPlaylist = false; }
+                        currentPlaylist = Array.from(displayCurrentPlaylist);
                         if (currentPlaylist[playlistId] && currentPlaylist[playlistId].filename === e.currentTarget.dataset.filename) {
                             updatePlayer(currentPlaylist[playlistId]);
                             if (audioPlayer.paused) { audioPlayer.play(); }
@@ -1620,6 +1616,7 @@
                 currentPlaylist = Array.from(todayPlaylist);
                 generateTodayPlaylist();
             }
+            displayCurrentPlaylist = Array.from(currentPlaylist);
             const savedVolume = localStorage.getItem('playerVolume');
             if (savedVolume !== null) {
                 const volume = parseFloat(savedVolume);
