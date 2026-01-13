@@ -868,6 +868,7 @@
         const downloadBtn = document.getElementById('downloadBtn');
         
         const jpgImageFolder = "audio";
+        const sessionid = Math.floor(Math.random() * 1000000);
         let playlistId = 0;
         let favoritePlaylist = [];
         let dislikePlaylist = [];
@@ -1110,6 +1111,10 @@
                 e.preventDefault();
                 if (audioPlayer.paused) { audioPlayer.play(); }
                 else { audioPlayer.pause(); }
+            } else if (e.key === 'ArrowLeft') {
+                audioPlayer.currentTime = Math.max(0, audioPlayer.currentTime - 5);
+            } else if (e.key === 'ArrowRight') {
+                audioPlayer.currentTime = Math.min(audioPlayer.duration, audioPlayer.currentTime + 5);
             }
         });
 
@@ -1198,11 +1203,18 @@
         audioPlayer.addEventListener('play', function() {
             playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
             mainPlayBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            localStorage.setItem('sessionPlaying', sessionid);
         });
-        
+
         audioPlayer.addEventListener('pause', function() {
             playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
             mainPlayBtn.innerHTML = '<i class="fas fa-play"></i>';
+        });
+
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'sessionPlaying' && e.newValue && e.newValue !== sessionid.toString()) {
+                audioPlayer.pause();
+            }
         });
 
         audioPlayer.addEventListener('timeupdate', function() {
