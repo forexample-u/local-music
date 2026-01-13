@@ -422,6 +422,15 @@
             border-radius: 2px;
             overflow: hidden;
             cursor: pointer;
+            user-select: none;
+        }
+        
+        .progress-bar:active {
+            cursor: grabbing;
+        }
+        
+        .progress-bar:active .progress {
+            transition: none;
         }
         
         .progress {
@@ -867,6 +876,9 @@
         let currentPage = "today";
         let avatarNotFound = [];
         let isUpdateCurrentPlaylist = false;
+        let isDraggingProgress = false;
+        let dragStartX = 0;
+        let dragStartProgress = 0;
         
         function formatTime(seconds){
             const secs = Math.floor(seconds % 60);
@@ -961,6 +973,62 @@
                 audioPlayer.currentTime = (clickPosition / progressBarWidth) * duration;
                 progress.style.width = `${(clickPosition / progressBarWidth) * 100}%`;
             }
+        });
+
+        function updateProgressOnDrag(e) {
+            const rect = progressBar.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            progress.style.width = `${percent * 100}%`;
+            currentTimeEl.textContent = formatTime(percent * audioPlayer.duration || 0);
+        }
+
+        function applyProgressChange() {
+            const progressPercent = parseFloat(progress.style.width) / 100;
+            const duration = audioPlayer.duration;
+            if (duration) {
+                audioPlayer.currentTime = progressPercent * duration;
+            }
+        }
+
+        document.addEventListener('mouseup', function() {
+            if (isDraggingProgress) {
+                isDraggingProgress = false;
+                applyProgressChange();
+            }
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (isDraggingProgress) {
+                updateProgressOnDrag(e);
+            }
+        });
+
+        progressBar.addEventListener('mousedown', function(e) {
+            isDraggingProgress = true;
+            dragStartX = e.clientX;
+            dragStartProgress = parseFloat(progress.style.width) || 0;
+            updateProgressOnDrag(e);
+        });
+
+        document.addEventListener('touchend', function() {
+            if (isDraggingProgress) {
+                isDraggingProgress = false;
+                applyProgressChange();
+            }
+        });
+
+        document.addEventListener('touchmove', function(e) {
+            if (isDraggingProgress) {
+                updateProgressOnDrag({clientX: e.touches[0].clientX});
+                e.preventDefault();
+            }
+        });
+
+        progressBar.addEventListener('touchstart', function(e) {
+            isDraggingProgress = true;
+            dragStartX = e.touches[0].clientX;
+            dragStartProgress = parseFloat(progress.style.width) || 0;
+            updateProgressOnDrag({clientX: e.touches[0].clientX});
         });
 
         menuHome.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
@@ -1138,6 +1206,7 @@
         });
 
         audioPlayer.addEventListener('timeupdate', function() {
+            if (isDraggingProgress) { return; }
             const seconds = audioPlayer.currentTime;
             const duration = audioPlayer.duration || 0;
             const progressPercent = duration > 0 ? (seconds / duration) * 100 : 0;

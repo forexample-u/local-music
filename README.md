@@ -21,9 +21,9 @@ How clone it project? (it's not easy) <br/>
 2. Open local add.html or goto https://reversedir.github.io/zila/add.html
 3. Select all mp3 files, you get audio.zip
 4. Throw all .jpg and .mp3 files and audio.js in /audio folder
-5. Start index.html
+5. Run index.html
 
-Advance info .mp3 to .opus with use ffmpeg and .ps (powershell script) <br />
+Advance info .mp3 to .opus with use ffmpeg and .ps1 (powershell script) <br />
 ```bash
 $currentDirectory = $PWD.Path
 $outputRoot = Join-Path $currentDirectory "render"
