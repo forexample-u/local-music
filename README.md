@@ -1,4 +1,4 @@
-# Zilla 🦖
+# Zilla 
 
 Zilla - is a minimalist web player that works completely without subscriptions or hidden fees with offline!<br/>
 
