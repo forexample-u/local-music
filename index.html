@@ -1059,7 +1059,7 @@
             currentPage = "favorite";
             history.pushState({page: currentPage}, '', `?page=${currentPage}`);
             document.querySelector('.playlist-container').scrollTo({ top: 0, behavior: 'smooth' });
-            displayCurrentPlaylist = Array.from(dislikePlaylist);
+            displayCurrentPlaylist = Array.from(favoritePlaylist);
         });
 
         menuBan.addEventListener('click', function() {
@@ -1346,7 +1346,6 @@
                 };
                 testImage.src = imagePath;
             }
-            localStorage.setItem("track", JSON.stringify(track));
         }
 
         function getTodayPlaylist() {
