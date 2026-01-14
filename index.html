@@ -204,8 +204,8 @@
 
         .track-play-icon {
             position: absolute;
-            left: -5px;
-            top: 50%;
+            left: -3px;
+            top: 49.5%;
             transform: translateY(-50%);
             color: white;
             font-size: 20px;
@@ -218,6 +218,14 @@
             box-sizing: content-box;
         }
 
+        .track-cover {
+            width: 45px;
+            height: 45px;
+            background-color: #333;
+            flex-shrink: 0;
+            border-radius: 2.5px;
+        }
+
         .track-row:hover .track-play-icon {
             opacity: 1;
         }
@@ -225,20 +233,9 @@
         .track-row:hover .track-cover {
             opacity: 0.6;
         }
-        
-        @keyframes simple-pulse {
-            0% { transform: scale(0.85); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(0.85); }
-        }
 
-        .track-row.active .track-title {
-            opacity: 1.0;
-        }
-
-        .track-row.playing .track-title {
-            color: #1db954;
-            opacity: 1.0;
+        .track-row.active .track-cover {
+            opacity: 0.7;
         }
 
         .track-row.active .track-play-icon {
@@ -248,13 +245,28 @@
         .track-row.playing .track-play-icon {
             opacity: 0.0;
         }
-        
-        .track-cover {
-            width: 45px;
-            height: 45px;
-            background-color: #333;
-            flex-shrink: 0;
-            border-radius: 2.5px;
+
+        .track-row.playing:hover .track-play-icon {
+            opacity: 1.0;
+        }
+
+        .playing-icon {
+            position: absolute;
+        }
+
+        @keyframes simple-pulse {
+            0% { transform: scale(0.85); }
+            50% { transform: scale(1.25); }
+            100% { transform: scale(0.85); }
+        }
+
+        .track-row.playing .playing-icon {
+            width: 12.5px;
+            height: 12.5px;
+            background-color: #0cd355;
+            animation: simple-pulse 1s infinite ease-in-out;
+            border-radius: 50%;
+            left: 15.5px;
         }
         
         .track-details {
@@ -1414,6 +1426,7 @@
                 const trackElement = document.createElement("div");
                 const trackInfo = document.createElement("div");
                 const playIcon = document.createElement("div");
+                const playingIcon = document.createElement("div");
                 const cover = document.createElement("div");
                 trackElement.className = "track-row";
                 trackElement.dataset.playlistid = i;
@@ -1422,6 +1435,7 @@
                 trackInfo.className = "track-info";
                 playIcon.className = "track-play-icon";
                 playIcon.innerHTML = '<i class="fas fa-play"></i>';
+                playingIcon.className = "playing-icon";
                 cover.className = "track-cover";
                 const imagePath = jpgImageFolder + `/${track.filename.split('.').slice(0, -1).join('.') + '.jpg'}`;
                 const testImage = new Image();
@@ -1452,6 +1466,7 @@
                 trackDetails.appendChild(trackArtist);
                 trackInfo.appendChild(playIcon);
                 trackInfo.appendChild(cover);
+                trackInfo.appendChild(playingIcon);
                 trackInfo.appendChild(trackDetails);
                 const trackTime = document.createElement("div");
                 const trackDuration = document.createElement("div");
