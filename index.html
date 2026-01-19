@@ -255,9 +255,9 @@
         }
 
         @keyframes simple-pulse {
-            0% { transform: scale(0.85); }
-            50% { transform: scale(1.25); }
-            100% { transform: scale(0.85); }
+            0% { transform: scale(0.825); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(0.825); }
         }
 
         .track-row.playing .playing-icon {
@@ -750,7 +750,7 @@
 </head>
 <body>
     <div class="sidebar">
-        <div class="logo" onclick="document.getElementById('menuHome').click(); document.querySelector('.playlist-container').scrollTo(0, 0);">
+        <div class="logo" id="menuLogo" onclick="document.getElementById('menuHome').click(); document.querySelector('.playlist-container').scrollTo(0, 0);">
             <i class="fas fa-music"></i>
         </div>
         <div class="nav-item active" id="menuHome">
@@ -878,6 +878,7 @@
         const mainPlayBtn = document.getElementById("mainPlayBtn");
         const nextTrackBtn = document.getElementById("nextTrackBtn");
         const prevTrackBtn = document.getElementById("prevTrackBtn");
+        const volumeIcon = document.querySelector('.volume-icon');
         const volumeBar = document.getElementById("volumeBar");
         const volumeLevel = document.getElementById("volumeLevel");
         const playerTitle = document.getElementById("playerTitle");
@@ -901,6 +902,7 @@
         const settingsModal = document.getElementById('settingsModal');
         const closeModalBtn = document.getElementById('closeModalBtn');
         const downloadBtn = document.getElementById('downloadBtn');
+        const menuLogo = document.getElementById('menuLogo');
         
         const jpgImageFolder = "audio";
         const sessionid = Math.floor(Math.random() * 1000000);
@@ -1080,9 +1082,33 @@
             updateProgressOnDrag({clientX: e.touches[0].clientX});
         });
 
-        menuHome.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
-        menuFavorite.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
-        menuBan.addEventListener('auxclick', function(e) { e.preventDefault(); window.open(window.location.href, '_blank'); });
+        menuLogo.addEventListener('auxclick', function(e) { 
+            if (e.button === 1) { 
+                e.preventDefault();
+                window.open(window.location.origin + window.location.pathname, '_blank');
+            }
+        });
+
+        menuHome.addEventListener('auxclick', function(e) { 
+            if (e.button === 1) { 
+                e.preventDefault();
+                window.open(window.location.origin + window.location.pathname, '_blank');
+            }
+        });
+
+        menuFavorite.addEventListener('auxclick', function(e) {
+            if (e.button === 1) {
+                e.preventDefault();
+                window.open(window.location.origin + window.location.pathname + '?page=favorite', '_blank');
+            }
+        });
+
+        menuBan.addEventListener('auxclick', function(e) {
+            if (e.button === 1) {
+                e.preventDefault();
+                window.open(window.location.origin + window.location.pathname + '?page=dislike', '_blank');
+            }
+        });
 
         menuHome.addEventListener('click', function() {
             menuHome.classList.add('active');
@@ -1124,11 +1150,23 @@
             updateActiveTrack();
         });
 
+        document.querySelector('.volume-icon').addEventListener('click', function() {
+            const volume = localStorage.getItem('playerVolume');
+            if (audioPlayer.volume > 0) {
+                audioPlayer.volume = 0;
+                volumeIcon.className = 'fas fa-volume-mute volume-icon';
+                volumeLevel.style.width = `0%`;
+            } else {
+                audioPlayer.volume = volume;
+                volumeIcon.className = 'fas fa-volume-up volume-icon';
+                volumeLevel.style.width = `${volume * 100}%`;
+            }
+        });
+
         volumeBar.addEventListener('click', function(e) {
             const newVolume = e.offsetX / this.offsetWidth;
             audioPlayer.volume = newVolume;
             volumeLevel.style.width = `${newVolume * 100}%`;
-            const volumeIcon = document.querySelector('.volume-icon');
             if (newVolume === 0) { volumeIcon.className = 'fas fa-volume-mute volume-icon'; }
             else { volumeIcon.className = 'fas fa-volume-up volume-icon'; }
             localStorage.setItem('playerVolume', newVolume.toString());
@@ -1678,7 +1716,6 @@
                 const volume = parseFloat(savedVolume);
                 audioPlayer.volume = volume;
                 volumeLevel.style.width = `${volume * 100}%`;
-                const volumeIcon = document.querySelector('.volume-icon');
                 if (volume === 0) { volumeIcon.className = 'fas fa-volume-mute volume-icon'; }
                 else { volumeIcon.className = 'fas fa-volume-up volume-icon'; }
             }
