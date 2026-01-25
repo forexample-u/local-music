@@ -18,7 +18,7 @@ Hmmm? <br/>
 
 How clone it project? (it's not easy) <br/>
 1. Download 100-15000 mp3 (with tag: artist, title, genre, cover image)
-2. Open local add.html or goto https://reversedir.github.io/zila/add.html
+2. Open local add.html or goto `/zila/add.html`
 3. Select all mp3 files, you get audio.zip
 4. Throw all .jpg and .mp3 files and audio.js in /audio folder
 5. Run index.html
