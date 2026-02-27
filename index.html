@@ -1399,8 +1399,9 @@
         }
 
         function updatePlayer(track) {
+            const isUrl = track.filename.startsWith("https://") || track.filename.startsWith("http://");
             if (!audioPlayer.src.endsWith(`${track.filename}`)) {
-                audioPlayer.src = `audio/${track.filename}`;
+                audioPlayer.src = isUrl ? `${track.filename}` : `audio/${track.filename}`;
             }
             playerTitle.textContent = track.title;
             playerArtist.textContent = track.artist;
@@ -1422,7 +1423,8 @@
                 playerDislike.classList.remove('dislike-active');
                 playerDislike.innerHTML = '<i class="far fa-thumbs-down"></i>';
             }
-            const imagePath = jpgImageFolder + `/${track.filename.split('.').slice(0, -1).join('.') + '.jpg'}`;
+            const imageFilename = track.filename.split('.').slice(0, -1).join('.') + '.jpg';
+            const imagePath = isUrl ? imageFilename : `${jpgImageFolder}/${imageFilename}`;
             const testImage = new Image();
             if (avatarNotFound.includes(track.filename)){
                 setCoverBackground(playerCover, track);
@@ -1475,7 +1477,9 @@
                 playIcon.innerHTML = '<i class="fas fa-play"></i>';
                 playingIcon.className = "playing-icon";
                 cover.className = "track-cover";
-                const imagePath = jpgImageFolder + `/${track.filename.split('.').slice(0, -1).join('.') + '.jpg'}`;
+                const isUrl = track.filename.startsWith("https://") || track.filename.startsWith("http://");
+                const imageFilename = track.filename.split('.').slice(0, -1).join('.') + '.jpg';
+                const imagePath = isUrl ? imageFilename : `${jpgImageFolder}/${imageFilename}`;
                 const testImage = new Image();
                 if (avatarNotFound.includes(track.filename)){
                     setCoverBackground(cover, track);
